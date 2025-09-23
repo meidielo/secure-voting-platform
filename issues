@@ -12,9 +12,6 @@ It cannot be tampered with.
    Non-repudiation / Integrity: All edits to the CMS by AEC Delegates shall be logged with user,
    timestamp, edit details, and HMAC SHA-256 row hash, with logs reviewed by auditors within 24 hours of any change. 
 
-4. Confidentiality / Integrity: all storage volumes shall be configured as encrypted volumes with AES-256, 
-using native operating system features. 
-
 5. Implement WAF in Docker configuration with API request rate-limiting 
 application proxy 
 apply rate-limiting, 10 requests per minute, for example 
@@ -24,21 +21,25 @@ candidates only within their assigned geographic area, enforced by multiple laye
 
 7. Voting outside Australia 
 Implement Geo-filtering based on IP 
-allow specific origin IP addresses which may be AEC-approved VPNs 
+allow specific origin IP addresses which may be AEC-approved VPNs
 
-8. Eligibility Verification and One Vote per Person 
+8. Implement MFA for all accounts including Voters
+Support one-time codes via SMS or email (e.g., integrate with Twilio).
+Support authenticator app TOTP (Time-based One-Time Password), which is easy to implement in Python.
+Optionally support Passkeys (FIDO2/WebAuthn) where devices and browsers allow.
+
+9. Eligibility Verification and One Vote per Person 
 The system shall ensure that each eligible voter can cast only one ballot. 
 Duplicate voting attempts must be automatically detected and rejected by the vote casting subsystem. 
 
-9. Disaster Recovery and Data Backup 
+10. Disaster Recovery and Data Backup 
 The system shall back up all critical election data (votes, logs, configurations) to secure off-site storage every hour. 
 Full system recovery must be possible within two hours to maintain election continuity. 
 
-10. Non-repudiation of Results 
+11. Non-repudiation of Results 
 Final election results shall be digitally signed with the Election Commission’s private key before publication. 
 Any recipient can verify authenticity using the Commission’s public key. 
 
-11. Secure Session Management 
+12. Secure Session Management 
 All user sessions (voter and staff) shall use signed, short-lived tokens (e.g., JWT). 
 Sessions must automatically expire after 15 minutes of inactivity to prevent misuse. 
-
