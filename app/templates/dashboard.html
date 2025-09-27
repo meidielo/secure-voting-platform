@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Welcome, {{ user.username }}</h2>
+        
+        {% if user.has_voted %}
+            <div class="alert alert-success">
+                <h4>Thank you for voting!</h4>
+                <p>You have successfully cast your vote.</p>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <h4>Cast Your Vote</h4>
+                <p>Please select your preferred candidate:</p>
+            </div>
+            
+            <div class="row">
+                {% for candidate in candidates %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ candidate.name }}</h5>
+                            <p class="card-text">
+                                <strong>Party:</strong> {{ candidate.party }}<br>
+                                <strong>Position:</strong> {{ candidate.position }}<br>
+                                <strong>Constituency:</strong> {{ candidate.constituency }}
+                            </p>
+                            <form method="POST" action="{{ url_for('main.vote') }}">
+                                <input type="hidden" name="candidate_id" value="{{ candidate.id }}">
+                                <button type="submit" class="btn btn-primary">Vote for {{ candidate.name }}</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

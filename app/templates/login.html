@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2>Login</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+        
+        <div class="mt-4">
+            <h5>Test Accounts:</h5>
+            <p><strong>Admin:</strong> username: admin, password: admin123</p>
+            <p><strong>Voter:</strong> username: voter1, password: password123</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
