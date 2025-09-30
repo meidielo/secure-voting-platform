@@ -106,7 +106,8 @@ class TestSmokeTests:
 
         # Verify vote was recorded
         with client.application.app_context():
-            vote = Vote.query.filter_by(user_id=User.query.filter_by(username='testuser').first().id).first()
+            user = User.query.filter_by(username='testuser').first()
+            vote = Vote.query.filter_by(user_id=user.id).first()
             assert vote is not None
             assert vote.candidate_id == candidate.id
 
