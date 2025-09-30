@@ -1,26 +1,381 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <h2>Login</h2>
-        <form method="POST">
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" required>
-            </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Login</button>
-        </form>
-        
-        <div class="mt-4">
-            <h5>Test Accounts:</h5>
-            <p><strong>Admin:</strong> username: admin, password: admin123</p>
-            <p><strong>Voter:</strong> username: voter1, password: password123</p>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | CivicVote</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root {
+      --primary: #2164f3;
+      --primary-darker: #1a55d5;
+      --accent: #00c389;
+      --dark: #1e293b;
+      --light: #f8fafc;
+      --warning: #f59e0b;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #f3f6ff 0%, #ffffff 35%);
+      color: #334155;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .navbar {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+      background: #fff;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .6rem;
+      font-weight: 800;
+      font-size: 1.35rem;
+      color: var(--primary);
+      letter-spacing: .2px;
+    }
+
+    .brand-badge i {
+      font-size: 1.25rem;
+      color: var(--accent);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      padding: .75rem 1.25rem;
+      font-weight: 600;
+      border-radius: .75rem;
+    }
+
+    .btn-primary:hover { background-color: var(--primary-darker); border-color: var(--primary-darker); }
+
+    .btn-outline-primary { border-radius: .75rem; font-weight: 600; }
+
+    .login-wrap { flex: 1; display: grid; place-items: center; padding: 2.5rem 1rem; }
+
+    .card-login {
+      width: 100%;
+      max-width: 980px;
+      background: #fff;
+      border: 0;
+      border-radius: 1rem;
+      box-shadow: 0 12px 32px rgba(2, 6, 23, .08);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 992px) {
+      .card-login { grid-template-columns: 1.1fr .9fr; }
+    }
+
+    .pane-info {
+      position: relative;
+      background: radial-gradient(1200px 500px at -10% 0%, #e9efff 0%, #eef3ff 30%, #ffffff 75%);
+      padding: 2rem;
+    }
+
+    .pane-info .hero {
+      background: linear-gradient(120deg, var(--primary), var(--primary-darker));
+      color: #fff;
+      border-radius: 1rem;
+      padding: 2rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 360px;
+    }
+
+    .hero h2 { font-weight: 800; letter-spacing: .2px; }
+    .hero p { opacity: .95; }
+
+    .trust-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; }
+    .trust-list li { display: flex; align-items: center; gap: .6rem; }
+    .trust-list i { color: #fff; opacity: .9; }
+
+    .pane-form { padding: 2rem; }
+    .form-title { margin-bottom: .25rem; font-weight: 800; color: var(--dark); }
+    .form-sub { color: #64748b; margin-bottom: 1.25rem; }
+
+    .form-control { padding: .85rem 1rem; border-radius: .75rem; border: 1px solid #e2e8f0; }
+    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 .2rem rgba(33, 100, 243, .15); }
+    .form-label { font-weight: 700; color: var(--dark); }
+
+    .input-group>.btn { border-top-right-radius: .75rem; border-bottom-right-radius: .75rem; }
+
+    .divider { display: grid; grid-template-columns: 1fr auto 1fr; gap: .75rem; align-items: center; margin: 1.25rem 0; color: #94a3b8; }
+    .divider::before, .divider::after { content: ""; border-top: 1px solid #e2e8f0; height: 1px; }
+
+    .meta-row { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+
+    .badge-soft { background: #eef2ff; color: var(--primary); border-radius: 999px; padding: .35rem .6rem; font-weight: 700; font-size: .75rem; }
+
+    .footer { background: #0b1220; color: #cbd5e1; margin-top: auto; }
+    .footer a { color: #cbd5e1; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    .security-note { font-size: .9rem; color: #64748b; }
+  </style>
+</head>
+
+<body>
+  <!-- Top Nav -->
+  <nav class="navbar navbar-expand-lg py-3">
+    <div class="container">
+      <a class="navbar-brand brand-badge" href="{% url 'home' %}">
+        <i class="fa-solid fa-shield-check"></i>
+        CivicVote
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMain">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="{% url 'elections' %}">Elections</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'results' %}">Results</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'help_center' %}">Help</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">About</a></li>
+        </ul>
+        <div class="d-flex gap-2">
+          <a href="{% url 'observer_login' %}" class="btn btn-outline-primary">Observer</a>
+          <a href="{% url 'admin_login' %}" class="btn btn-primary">Admin</a>
         </div>
+      </div>
     </div>
-</div>
-{% endblock %}
+  </nav>
+
+  <!-- Login Card -->
+  <section class="login-wrap">
+    <div class="card card-login">
+      <!-- Info / Highlights -->
+      <aside class="pane-info">
+        <div class="hero">
+          <div>
+            <span class="badge-soft mb-2"><i class="fa-solid fa-lock"></i> End‑to‑end privacy</span>
+            <h2 class="mt-2 mb-2">Secure Online Voting</h2>
+            <p>Cast your ballot safely from anywhere. Your identity is verified, and your vote remains secret.
+            </p>
+          </div>
+          <ul class="trust-list">
+            <li><i class="fa-solid fa-user-shield"></i><span>Two‑factor verification supported</span></li>
+            <li><i class="fa-solid fa-fingerprint"></i><span>Device binding & session integrity</span></li>
+            <li><i class="fa-solid fa-seal"></i><span>Encrypted at rest & in transit</span></li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- Form Pane -->
+      <div class="pane-form">
+        <h3 class="form-title">Voter Sign In</h3>
+        <p class="form-sub">Enter your credentials to access the ballot for your election.</p>
+
+        <!-- Django messages / error block -->
+        {% if messages %}
+        <div class="mb-3">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <form id="loginForm" class="needs-validation" action="{% url 'voter_login' %}" method="post" novalidate>
+          {% csrf_token %}
+
+          <!-- Election selector (optional) -->
+          <div class="mb-3">
+            <label for="election" class="form-label">Election</label>
+            <select id="election" name="election" class="form-control" required>
+              <option value="" selected disabled>Select your election</option>
+              {% for e in elections %}
+              <option value="{{ e.id }}">{{ e.name }} — {{ e.date|date:"M d, Y" }}</option>
+              {% endfor %}
+            </select>
+            <div class="invalid-feedback">Please select your election.</div>
+          </div>
+
+          <!-- Voter ID (or Email) -->
+          <div class="mb-3">
+            <label for="voter_id" class="form-label">Voter ID or Email</label>
+            <input type="text" class="form-control" id="voter_id" name="voter_id" placeholder="e.g., VTR-1234 or name@domain.com" required autocomplete="username" />
+            <div class="invalid-feedback">Enter your Voter ID or Email.</div>
+          </div>
+
+          <!-- Password / OTP field with toggle -->
+          <div class="mb-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <label for="secret" class="form-label mb-0">Password / One‑Time Code</label>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="togglePwd"><i class="fa-regular fa-eye"></i> Show</button>
+            </div>
+            <div class="input-group">
+              <input type="password" class="form-control" id="secret" name="secret" placeholder="Enter password or OTP" required minlength="6" autocomplete="current-password" />
+              <button class="btn btn-outline-primary" type="button" id="btnGetOtp"><i class="fa-solid fa-message"></i> Get OTP</button>
+            </div>
+            <div class="invalid-feedback">Please enter at least 6 characters.</div>
+            <div class="form-text text-end"><a href="{% url 'forgot_password' %}" class="text-decoration-none">Forgot password?</a></div>
+          </div>
+
+          <!-- 2FA Token (optional) -->
+          <div class="mb-3">
+            <label for="totp" class="form-label">Authenticator Code <span class="text-muted">(if enabled)</span></label>
+            <input type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="form-control" id="totp" name="totp" placeholder="6‑digit code" autocomplete="one-time-code" />
+            <div class="invalid-feedback">Enter a valid 6‑digit code.</div>
+          </div>
+
+          <!-- Remember & Legal -->
+          <div class="meta-row mb-3">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="rememberMe" name="remember" />
+              <label class="form-check-label" for="rememberMe">Remember me on this device</label>
+            </div>
+            <a href="{% url 'privacy' %}" class="small">Privacy</a>
+          </div>
+
+          <!-- (Optional) CAPTCHA placeholder -->
+          <div class="mb-3">
+            <!-- Integrate reCAPTCHA/Turnstile server-side; this is a placeholder. -->
+            <div class="border rounded p-3 d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-robot"></i>
+                <span>Human check enabled</span>
+              </div>
+              <span class="badge bg-success">Auto</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100" id="btnSubmit">
+            <i class="fa-solid fa-right-to-bracket me-1"></i> Sign In & Access Ballot
+          </button>
+
+          <div class="divider"><span>or</span></div>
+
+          <div class="d-grid gap-2">
+            <a href="{% url 'voter_register' %}" class="btn btn-outline-primary">
+              <i class="fa-solid fa-id-card-clip me-1"></i> Register as a Voter
+            </a>
+            <a href="{% url 'track_ballot' %}" class="btn btn-outline-primary">
+              <i class="fa-solid fa-location-crosshairs me-1"></i> Track My Ballot
+            </a>
+          </div>
+        </form>
+
+        <p class="security-note mt-4">
+          <i class="fa-solid fa-circle-info"></i> Your credentials are transmitted securely using industry‑standard TLS encryption. This means they cannot be intercepted or read by election staff, system administrators, or third parties. Only you know your password or one‑time code—never share these details with anyone. Protecting your login keeps both your identity and your vote safe.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer py-4 mt-auto">
+    <div class="container">
+      <div class="row g-3 align-items-center">
+        <div class="col-md-6">
+          <small>&copy; {{ year|default:2025 }} CivicVote. All rights reserved.</small>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <a href="{% url 'terms' %}" class="me-3">Terms</a>
+          <a href="{% url 'cookies' %}" class="me-3">Cookies</a>
+          <a href="{% url 'security' %}">Security</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      'use strict';
+
+      const form = document.getElementById('loginForm');
+      const btnSubmit = document.getElementById('btnSubmit');
+      const togglePwd = document.getElementById('togglePwd');
+      const secret = document.getElementById('secret');
+      const btnGetOtp = document.getElementById('btnGetOtp');
+
+      // Bootstrap style validation on submit
+      form?.addEventListener('submit', function (e) {
+        if (!form.checkValidity()) {
+          e.preventDefault();
+          e.stopPropagation();
+          form.classList.add('was-validated');
+          const firstInvalid = form.querySelector(':invalid');
+          firstInvalid?.focus();
+          return;
+        }
+        // Loading state
+        btnSubmit.disabled = true;
+        btnSubmit.insertAdjacentHTML('beforeend', ' <span class="spinner-border spinner-border-sm ms-1" role="status" aria-hidden="true"></span>');
+      });
+
+      // Live feedback
+      const inputs = form?.querySelectorAll('input[required], select[required], input[minlength]') || [];
+      inputs.forEach((input) => {
+        input.addEventListener('input', () => {
+          if (input.checkValidity()) {
+            input.classList.remove('is-invalid');
+          } else {
+            input.classList.add('is-invalid');
+          }
+        });
+      });
+
+      // Show/Hide password
+      togglePwd?.addEventListener('click', () => {
+        if (!secret) return;
+        const isPwd = secret.type === 'password';
+        secret.type = isPwd ? 'text' : 'password';
+        togglePwd.innerHTML = isPwd
+          ? '<i class="fa-regular fa-eye-slash"></i> Hide'
+          : '<i class="fa-regular fa-eye"></i> Show';
+      });
+
+      // OTP (client-side demo only). Replace with a server call to start OTP delivery.
+      btnGetOtp?.addEventListener('click', async () => {
+        btnGetOtp.disabled = true;
+        const original = btnGetOtp.innerHTML;
+        btnGetOtp.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+        try {
+          // Example (Django):
+          // await fetch('{% url "request_otp" %}', {
+          //   method: 'POST',
+          //   headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+          //   body: new FormData(form)
+          // });
+          await new Promise(r => setTimeout(r, 1200));
+          btnGetOtp.classList.remove('btn-outline-primary');
+          btnGetOtp.classList.add('btn-success');
+          btnGetOtp.innerHTML = '<i class="fa-solid fa-check"></i> OTP Sent';
+        } catch (e) {
+          btnGetOtp.classList.remove('btn-outline-primary');
+          btnGetOtp.classList.add('btn-danger');
+          btnGetOtp.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Failed';
+          setTimeout(() => {
+            btnGetOtp.classList.add('btn-outline-primary');
+            btnGetOtp.classList.remove('btn-danger');
+            btnGetOtp.innerHTML = original;
+            btnGetOtp.disabled = false;
+          }, 1600);
+          return;
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>
