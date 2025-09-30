@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -132,7 +133,7 @@
   <!-- Top Nav -->
   <nav class="navbar navbar-expand-lg py-3">
     <div class="container">
-      <a class="navbar-brand brand-badge" href="{% url 'home' %}">
+      <a class="navbar-brand brand-badge" href="#">
         <i class="fa-solid fa-shield-check"></i>
         CivicVote
       </a>
@@ -141,14 +142,14 @@
       </button>
       <div class="collapse navbar-collapse" id="navMain">
         <ul class="navbar-nav me-auto">
-          <li class="nav-item"><a class="nav-link" href="{% url 'elections' %}">Elections</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'results' %}">Results</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'help_center' %}">Help</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">About</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Elections</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Results</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Help</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">About</a></li>
         </ul>
         <div class="d-flex gap-2">
-          <a href="{% url 'observer_login' %}" class="btn btn-outline-primary">Observer</a>
-          <a href="{% url 'admin_login' %}" class="btn btn-primary">Admin</a>
+          <a href="#" class="btn btn-outline-primary">Observer</a>
+          <a href="#" class="btn btn-primary">Admin</a>
         </div>
       </div>
     </div>
@@ -180,37 +181,34 @@
         <p class="form-sub">Enter your credentials to access the ballot for your election.</p>
 
         <!-- Django messages / error block -->
-        {% if messages %}
-        <div class="mb-3">
-          {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
-          {% endfor %}
-        </div>
-        {% endif %}
+              {% with messages = get_flashed_messages() %}
+              {% if messages %}
+              <div class="mb-3">
+                {% for message in messages %}
+                <div class="alert alert-info" role="alert">{{ message }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% endwith %}
 
-        {% if error %}
-        <div class="alert alert-danger" role="alert">{{ error }}</div>
-        {% endif %}
-
-        <form id="loginForm" class="needs-validation" action="{% url 'voter_login' %}" method="post" novalidate>
-          {% csrf_token %}
+              <form id="loginForm" class="needs-validation" action="{{ url_for('auth.login') }}" method="post" novalidate>
 
           <!-- Election selector (optional) -->
           <div class="mb-3">
             <label for="election" class="form-label">Election</label>
             <select id="election" name="election" class="form-control" required>
-              <option value="" selected disabled>Select your election</option>
-              {% for e in elections %}
-              <option value="{{ e.id }}">{{ e.name }} — {{ e.date|date:"M d, Y" }}</option>
-              {% endfor %}
-            </select>
+                <option value="" selected disabled>Select your election</option>
+                {% for e in elections or [] %}
+                <option value="{{ e.id }}">{{ e.name }} — {{ e.date.strftime('%b %d, %Y') }}</option>
+                {% endfor %}
+              </select>
             <div class="invalid-feedback">Please select your election.</div>
           </div>
 
           <!-- Voter ID (or Email) -->
           <div class="mb-3">
             <label for="voter_id" class="form-label">Voter ID or Email</label>
-            <input type="text" class="form-control" id="voter_id" name="voter_id" placeholder="e.g., VTR-1234 or name@domain.com" required autocomplete="username" />
+            <input type="text" class="form-control" id="voter_id" name="username" placeholder="e.g., VTR-1234 or name@domain.com" required autocomplete="username" />
             <div class="invalid-feedback">Enter your Voter ID or Email.</div>
           </div>
 
@@ -221,11 +219,11 @@
               <button class="btn btn-sm btn-outline-secondary" type="button" id="togglePwd"><i class="fa-regular fa-eye"></i> Show</button>
             </div>
             <div class="input-group">
-              <input type="password" class="form-control" id="secret" name="secret" placeholder="Enter password or OTP" required minlength="6" autocomplete="current-password" />
+              <input type="password" class="form-control" id="secret" name="password" placeholder="Enter password or OTP" required minlength="6" autocomplete="current-password" />
               <button class="btn btn-outline-primary" type="button" id="btnGetOtp"><i class="fa-solid fa-message"></i> Get OTP</button>
             </div>
             <div class="invalid-feedback">Please enter at least 6 characters.</div>
-            <div class="form-text text-end"><a href="{% url 'forgot_password' %}" class="text-decoration-none">Forgot password?</a></div>
+            <div class="form-text text-end"><a href="#" class="text-decoration-none">Forgot password?</a></div>
           </div>
 
           <!-- 2FA Token (optional) -->
@@ -241,7 +239,7 @@
               <input type="checkbox" class="form-check-input" id="rememberMe" name="remember" />
               <label class="form-check-label" for="rememberMe">Remember me on this device</label>
             </div>
-            <a href="{% url 'privacy' %}" class="small">Privacy</a>
+            <a href="#" class="small">Privacy</a>
           </div>
 
           <!-- (Optional) CAPTCHA placeholder -->
@@ -263,10 +261,10 @@
           <div class="divider"><span>or</span></div>
 
           <div class="d-grid gap-2">
-            <a href="{% url 'voter_register' %}" class="btn btn-outline-primary">
+            <a href="#" class="btn btn-outline-primary">
               <i class="fa-solid fa-id-card-clip me-1"></i> Register as a Voter
             </a>
-            <a href="{% url 'track_ballot' %}" class="btn btn-outline-primary">
+            <a href="#" class="btn btn-outline-primary">
               <i class="fa-solid fa-location-crosshairs me-1"></i> Track My Ballot
             </a>
           </div>
@@ -280,16 +278,16 @@
   </section>
 
   <!-- Footer -->
-  <footer class="footer py-4 mt-auto">
+          <footer class="footer py-4 mt-auto">
     <div class="container">
       <div class="row g-3 align-items-center">
         <div class="col-md-6">
-          <small>&copy; {{ year|default:2025 }} CivicVote. All rights reserved.</small>
+          <small>&copy; {{ year|default(2025) }} CivicVote. All rights reserved.</small>
         </div>
-        <div class="col-md-6 text-md-end">
-          <a href="{% url 'terms' %}" class="me-3">Terms</a>
-          <a href="{% url 'cookies' %}" class="me-3">Cookies</a>
-          <a href="{% url 'security' %}">Security</a>
+          <div class="col-md-6 text-md-end">
+          <a href="#" class="me-3">Terms</a>
+          <a href="#" class="me-3">Cookies</a>
+          <a href="#">Security</a>
         </div>
       </div>
     </div>
@@ -352,7 +350,7 @@
         btnGetOtp.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
         try {
           // Example (Django):
-          // await fetch('{% url "request_otp" %}', {
+          // await fetch('#', {
           //   method: 'POST',
           //   headers: { 'X-CSRFToken': '{{ csrf_token }}' },
           //   body: new FormData(form)
