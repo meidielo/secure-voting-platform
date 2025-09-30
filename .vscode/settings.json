@@ -1,0 +1,9 @@
+{
+    "CodeGPT.apiKey": "Anthropic",
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "*.ejs": "html",
+        "*.py": "cpp",
+        "ios": "cpp"
+    }
+}
