@@ -3,7 +3,7 @@
     "files.associations": {
         "*.embeddedhtml": "html",
         "*.ejs": "html",
-        "*.py": "cpp",
+        "*.py": "python",
         "ios": "cpp"
     }
 }
