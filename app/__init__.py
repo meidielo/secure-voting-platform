@@ -12,7 +12,8 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True, template_folder='templates')
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret'),
-        SQLALCHEMY_DATABASE_URI=('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
+        SQLALCHEMY_DATABASE_URI= os.environ.get('DATABASE_URL') 
+            or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
 

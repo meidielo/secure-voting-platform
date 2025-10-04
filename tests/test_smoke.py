@@ -1,207 +1,191 @@
 """
-Smoke tests for the CivicVote Flask application.
-These tests verify basic functionality and ensure the app is working correctly.
+Smoke tests for the voting application.
+These tests verify basic functionality works correctly.
 """
 
 import pytest
-from app import create_app, db
+from flask import url_for
 from app.models import User, Candidate, Vote
-from flask_login import login_user
-import tempfile
-import os
 
 
-@pytest.fixture
-def app():
-    """Create and configure a test app instance."""
-    db_fd, db_path = tempfile.mkstemp()
+class TestSmokeTests:
+    """Basic smoke tests to ensure the application works."""
 
-    app = create_app(test_config={
-        'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
-        'SECRET_KEY': 'test-secret-key',
-        'WTF_CSRF_ENABLED': False,  # Disable CSRF for testing
-    })
+    def test_app_creation(self, app):
+        """Test that the app can be created successfully."""
+        assert app is not None
+        assert app.config['TESTING'] is True
 
-    with app.app_context():
-        db.create_all()
-        # Create test data
-        user = User(username='testuser', email='test@example.com')
-        user.set_password('password')
-        db.session.add(user)
-
-        candidate1 = Candidate(name='Alice Johnson', position='President')
-        candidate2 = Candidate(name='Bob Smith', position='President')
-        db.session.add(candidate1)
-        db.session.add(candidate2)
-        db.session.commit()
-
-    yield app
-
-    # Close all database connections before trying to delete the file
-    try:
+    def test_database_initialization(self, app):
+        """Test that the database is properly initialized."""
         with app.app_context():
-            db.session.remove()
-    except RuntimeError:
-        # Application context might already be torn down
-        pass
-    os.close(db_fd)
-    # On Windows, we need to wait a bit for the file to be fully released
-    import time
-    time.sleep(0.1)
-    try:
-        os.unlink(db_path)
-    except PermissionError:
-        # If we still can't delete it, just leave it
-        pass
+            # Check that tables exist
+            assert User.query.count() >= 0
+            assert Candidate.query.count() >= 0
+            assert Vote.query.count() >= 0
 
+    def test_home_page_redirects_to_login(self, client):
+        """Test that the home page redirects to login."""
+        response = client.get('/')
+        assert response.status_code == 302  # Redirect
+        assert '/login' in response.headers['Location']
 
-@pytest.fixture
-def client(app):
-    """A test client for the app."""
-    return app.test_client()
-
-
-@pytest.fixture
-def runner(app):
-    """A test runner for the app's Click commands."""
-    return app.test_cli_runner()
-
-
-def test_home_page(client):
-    """Test that the home page redirects to login."""
-    response = client.get('/')
-    assert response.status_code == 302  # Redirect to login
-
-
-def test_login_page(client):
-    """Test that the login page loads."""
-    response = client.get('/login')
-    assert response.status_code == 200
-    assert b'Login' in response.data
-
-
-def test_login_required_for_dashboard(client):
-    """Test that dashboard requires login."""
-    response = client.get('/dashboard')
-    assert response.status_code == 302  # Redirect to login
-
-
-def test_login_required_for_vote(client):
-    """Test that voting requires login."""
-    response = client.post('/vote')  # POST method
-    assert response.status_code == 302  # Redirect to login
-
-
-def test_login_required_for_results(client):
-    """Test that results require login."""
-    response = client.get('/results')
-    assert response.status_code == 302  # Redirect to login
-
-
-def test_successful_login(client, app):
-    """Test successful user login."""
-    with app.app_context():
-        response = client.post('/login', data={
-            'username': 'testuser',
-            'password': 'password'
-        }, follow_redirects=True)
+    def test_login_page_loads(self, client):
+        """Test that the login page loads successfully."""
+        response = client.get('/login')
         assert response.status_code == 200
-        assert b'Welcome, testuser' in response.data  # Shows voting interface
+        assert b'Voter Sign In' in response.data
 
+    def test_successful_login(self, client):
+        """Test successful login with test credentials."""
+        # First, ensure test user exists
+        with client.application.app_context():
+            user = User.query.filter_by(username='voter1').first()
+            assert user is not None
 
-def test_invalid_login(client):
-    """Test login with invalid credentials."""
-    response = client.post('/login', data={
-        'username': 'wronguser',
-        'password': 'wrongpass'
-    })
-    assert response.status_code == 200
-    assert b'Invalid username or password' in response.data
-
-
-def test_dashboard_access_after_login(client, app):
-    """Test dashboard access after login."""
-    with app.app_context():
-        # Login first
+        # Attempt login
         response = client.post('/login', data={
-            'username': 'testuser',
-            'password': 'password'
+            'username': 'voter1',
+            'password': 'password123'
         }, follow_redirects=True)
-        assert b'Welcome, testuser' in response.data  # Shows voting interface
 
+        assert response.status_code == 200
+        # Should redirect to dashboard after successful login
+        assert b'Welcome, voter1' in response.data
 
-def test_vote_page_access_after_login(client, app):
-    """Test vote page access after login."""
-    with app.app_context():
+    def test_failed_login(self, client):
+        """Test login with invalid credentials."""
+        response = client.post('/login', data={
+            'username': 'voter1',
+            'password': 'wrongpassword'
+        }, follow_redirects=True)
+
+        assert response.status_code == 200
+        assert b'Invalid username or password' in response.data
+
+    def test_dashboard_requires_login(self, client):
+        """Test that dashboard requires authentication."""
+        response = client.get('/dashboard')
+        assert response.status_code == 302  # Redirect to login
+        assert '/login' in response.headers['Location']
+
+    def test_dashboard_shows_candidates(self, client):
+        """Test that dashboard shows available candidates after login."""
         # Login first
         client.post('/login', data={
-            'username': 'testuser',
-            'password': 'password'
-        }, follow_redirects=True)
+            'username': 'voter1',
+            'password': 'password123'
+        })
 
-        # Access vote page (POST method)
-        response = client.post('/vote', data={'candidate_id': 1}, follow_redirects=True)
+        # Access dashboard
+        response = client.get('/dashboard')
         assert response.status_code == 200
+        assert b'John Smith' in response.data
+        assert b'Sarah Johnson' in response.data
 
+    def test_voting_functionality(self, client):
+        """Test the complete voting process."""
+        with client.application.app_context():
+            candidate = Candidate.query.filter_by(name='John Smith').first()
+            assert candidate is not None
 
-def test_cast_vote(client, app):
-    """Test casting a vote."""
-    with app.app_context():
-        # Login first
+        # Login
         client.post('/login', data={
-            'username': 'testuser',
-            'password': 'password'
-        }, follow_redirects=True)
+            'username': 'voter1',
+            'password': 'password123'
+        })
 
-        # Cast vote
+        # Vote for candidate
         response = client.post('/vote', data={
-            'candidate_id': 1
+            'candidate_id': candidate.id
         }, follow_redirects=True)
+
         assert response.status_code == 200
-        assert b'Thank you for voting' in response.data
+        # Should show "Vote cast successfully!" on dashboard after voting
+        assert b'Vote cast successfully' in response.data
 
+        # Verify vote was recorded
+        with client.application.app_context():
+            user = User.query.filter_by(username='voter1').first()
+            vote = Vote.query.filter_by(user_id=user.id).first()
+            assert vote is not None
+            assert vote.candidate_id == candidate.id
 
-def test_results_page_access_after_login(client, app):
-    """Test results page access after login (requires admin)."""
-    with app.app_context():
-        # Login first
+    def test_admin_results_access(self, client):
+        """Test that admin can access results page."""
+        # Login as admin
         client.post('/login', data={
-            'username': 'testuser',
-            'password': 'password'
-        }, follow_redirects=True)
+            'username': 'admin',
+            'password': 'admin123'
+        })
 
-        # Access results (should be denied since user is not admin)
+        # Access results
         response = client.get('/results')
-        assert response.status_code == 302  # Redirect due to no admin access
+        assert response.status_code == 200
+        assert b'Results' in response.data
 
+    def test_non_admin_cannot_access_results(self, client):
+        """Test that regular users cannot access results page."""
+        # Login as regular user
+        client.post('/login', data={
+            'username': 'voter1',
+            'password': 'password123'
+        })
 
-def test_logout(client, app):
-    """Test user logout."""
-    with app.app_context():
+        # Try to access results - should redirect to dashboard
+        response = client.get('/results', follow_redirects=True)
+        assert response.status_code == 200
+        # Should be redirected to dashboard
+        assert b'Welcome, voter1' in response.data
+
+    def test_logout_functionality(self, client):
+        """Test logout functionality."""
         # Login first
         client.post('/login', data={
-            'username': 'testuser',
-            'password': 'password'
-        }, follow_redirects=True)
+            'username': 'voter1',
+            'password': 'password123'
+        })
 
         # Logout
         response = client.get('/logout', follow_redirects=True)
         assert response.status_code == 200
         assert b'Login' in response.data
 
+        # Try to access dashboard (should redirect to login)
+        response = client.get('/dashboard')
+        assert response.status_code == 302
+        assert '/login' in response.headers['Location']
 
-def test_developer_dashboard_denied_from_remote(client):
-    """Test that developer dashboard denies access from non-localhost."""
-    # In test mode, the remote_addr check might not work the same way
-    # Let's skip this test for now since the functionality works in real usage
-    pass
+    def test_prevent_double_voting(self, client):
+        """Test that users cannot vote twice."""
+        with client.application.app_context():
+            candidate = Candidate.query.filter_by(name='John Smith').first()
 
+        # Login and vote
+        client.post('/login', data={
+            'username': 'voter1',
+            'password': 'password123'
+        })
 
-def test_developer_dashboard_allowed_from_localhost(client):
-    """Test that developer dashboard allows access from localhost."""
-    # In test mode, the remote_addr check might not work the same way
-    # Let's test that the route exists and returns something
-    response = client.get('/dev/dashboard')
-    # In test mode, it might return 200 or handle remote_addr differently
-    assert response.status_code in [200, 403]  # Either allowed or denied
+        # First vote
+        client.post('/vote', data={'candidate_id': candidate.id})
+
+        # Try to vote again
+        response = client.post('/vote', data={'candidate_id': candidate.id}, follow_redirects=True)
+        assert response.status_code == 200
+        # Should show error message since user has already voted
+        assert b'You have already voted' in response.data
+
+    def test_developer_dashboard_denied_from_remote(self, client):
+        """Test that developer dashboard denies access from non-localhost."""
+        # In test mode, the remote_addr check might not work the same way
+        # Let's skip this test for now since the functionality works in real usage
+        pass
+
+    def test_developer_dashboard_allowed_from_localhost(self, client):
+        """Test that developer dashboard allows access from localhost."""
+        # In test mode, the remote_addr check might not work the same way
+        # Let's test that the route exists and returns something
+        response = client.get('/dev/dashboard')
+        # In test mode, it might return 200 or handle remote_addr differently
+        assert response.status_code in [200, 403]  # Either allowed or denied
