@@ -11,6 +11,41 @@
         </div>
     </div>
 
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tools"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary w-100">
+                                <i class="fas fa-tachometer-alt"></i> Main Dashboard
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('main.results') }}" class="btn btn-success w-100">
+                                <i class="fas fa-chart-bar"></i> View Results
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('auth.logout') }}" class="btn btn-warning w-100">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button onclick="location.reload()" class="btn btn-info w-100">
+                                <i class="fas fa-sync"></i> Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- System Information -->
     <div class="row mb-4">
         <div class="col-md-6">
@@ -24,7 +59,7 @@
                             {% for key, value in system_info.items() %}
                             <tr>
                                 <td><strong>{{ key|replace('_', ' ')|title }}</strong></td>
-                                <td>{{ value }}</td>
+                                <td style="word-break: break-all; white-space: normal;">{{ value }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -70,41 +105,41 @@
                     <h5><i class="fas fa-database"></i> Database Information</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-md-4">
                             <table class="table table-sm">
                                 <tbody>
                                     {% for key, value in db_info.items() %}
                                     <tr>
                                         <td><strong>{{ key|title }}</strong></td>
-                                        <td>{{ value }}</td>
+                                        <td style="word-break: break-all; white-space: normal;">{{ value }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-4">
                                     <div class="card bg-primary text-white">
                                         <div class="card-body text-center">
-                                            <h3>{{ users|length }}</h3>
+                                            <h4>{{ users|length }}</h4>
                                             <p class="mb-0">Users</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-4">
                                     <div class="card bg-success text-white">
                                         <div class="card-body text-center">
-                                            <h3>{{ candidates|length }}</h3>
+                                            <h4>{{ candidates|length }}</h4>
                                             <p class="mb-0">Candidates</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-4">
                                     <div class="card bg-info text-white">
                                         <div class="card-body text-center">
-                                            <h3>{{ votes|length }}</h3>
+                                            <h4>{{ votes|length }}</h4>
                                             <p class="mb-0">Votes</p>
                                         </div>
                                     </div>
@@ -268,41 +303,7 @@
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-tools"></i> Quick Actions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary w-100">
-                                <i class="fas fa-tachometer-alt"></i> Main Dashboard
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="{{ url_for('main.results') }}" class="btn btn-success w-100">
-                                <i class="fas fa-chart-bar"></i> View Results
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="{{ url_for('auth.logout') }}" class="btn btn-warning w-100">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <button onclick="location.reload()" class="btn btn-info w-100">
-                                <i class="fas fa-sync"></i> Refresh Data
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
-</div>
 
 <script>
 // Auto-refresh every 30 seconds

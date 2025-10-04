@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -25,6 +26,27 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path, exist_ok=True)
     except OSError:
         pass
+
+    # Configure logging
+    log_file = os.path.join(app.instance_path, 'app.log')
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    # Also log to console (stdout)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console.setFormatter(formatter)
+    # Add console handler to root logger
+    logging.getLogger('').addHandler(console)
+
+    # Ensure werkzeug logs also go to our handlers
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.INFO)
+    werkzeug_logger.addHandler(console)
 
     db.init_app(app)
     login_manager.init_app(app)

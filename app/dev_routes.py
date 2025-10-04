@@ -18,9 +18,16 @@ dev = Blueprint('dev', __name__, url_prefix='/dev')
 @dev.route('/dashboard')
 def dev_dashboard():
     """Developer dashboard - LOCAL DEVELOPMENT ONLY"""
-    # Only allow access from localhost
-    if request.remote_addr not in ['127.0.0.1', 'localhost', '::1']:
-        return "Access denied: Developer dashboard only available locally", 403
+    # Get real client IP (handle proxy/load balancer)
+    forwarded_for = request.headers.get('X-Forwarded-For', request.remote_addr)
+    client_ip = forwarded_for.split(',')[0].strip() if forwarded_for else request.remote_addr
+    
+    # For development, also allow requests from nginx container network
+    allowed_ips = ['127.0.0.1', 'localhost', '::1', '172.24.0.1']  # nginx container IP
+    
+    # Only allow access from localhost or nginx proxy
+    if client_ip not in allowed_ips:
+        return f"Access denied: Developer dashboard only available locally (client IP: {client_ip}, forwarded: {forwarded_for})", 403
 
     # Database contents
     users = User.query.all()
@@ -59,20 +66,38 @@ def dev_dashboard():
             return f"Error reading file: {e}"
 
     # Web server logs (Flask logs)
-    web_logs = "Flask application logs not available in development mode"
+    log_file = os.path.join(current_app.instance_path, 'app.log')
+    web_logs = read_last_lines(log_file)
 
     # WAF logs (nginx access/error logs)
-    nginx_access_log = read_last_lines('nginx-access.log')
-    nginx_error_log = read_last_lines('nginx-error.log')
+    # Note: nginx logs are in the nginx container. Use 'docker-compose logs waf' to view them
+    nginx_access_log = "WAF access logs available via: docker-compose logs waf"
+    nginx_error_log = "WAF error logs available via: docker-compose logs waf"
 
-    # Database file info
-    db_path = os.path.join(current_app.instance_path, 'app.db')
+    # Database information
+    db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', 'Not configured')
     db_info = {
-        'path': db_path,
-        'exists': os.path.exists(db_path),
-        'size': f"{os.path.getsize(db_path) / 1024:.1f} KB" if os.path.exists(db_path) else "N/A",
-        'modified': datetime.fromtimestamp(os.path.getmtime(db_path)).strftime('%Y-%m-%d %H:%M:%S') if os.path.exists(db_path) else "N/A"
+        'uri': db_uri,
+        'type': 'SQLite' if db_uri.startswith('sqlite:///') else ('MySQL' if 'mysql' in db_uri else ('PostgreSQL' if 'postgresql' in db_uri else 'Unknown')),
     }
+
+    # For SQLite, add file information
+    if db_uri.startswith('sqlite:///'):
+        db_path = db_uri.replace('sqlite:///', '')
+        db_info.update({
+            'path': db_path,
+            'exists': os.path.exists(db_path),
+            'size': f"{os.path.getsize(db_path) / 1024:.1f} KB" if os.path.exists(db_path) else "N/A",
+            'modified': datetime.fromtimestamp(os.path.getmtime(db_path)).strftime('%Y-%m-%d %H:%M:%S') if os.path.exists(db_path) else "N/A"
+        })
+    else:
+        # For other databases, show connection info
+        db_info.update({
+            'path': 'Remote database (MySQL/PostgreSQL)',
+            'exists': 'Connected via network',
+            'size': 'N/A (remote database)',
+            'modified': 'N/A (remote database)'
+        })
 
     return render_template('dev_dashboard.html',
                          users=users,
