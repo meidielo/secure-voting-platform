@@ -74,6 +74,17 @@ def dev_dashboard():
     nginx_access_log = "WAF access logs available via: docker-compose logs waf"
     nginx_error_log = "WAF error logs available via: docker-compose logs waf"
 
+    # Client connection information
+    client_info = {
+        'remote_addr': request.remote_addr,
+        'x_forwarded_for': request.headers.get('X-Forwarded-For', 'Not set'),
+        'x_real_ip': request.headers.get('X-Real-IP', 'Not set'),
+        'x_forwarded_proto': request.headers.get('X-Forwarded-Proto', 'Not set'),
+        'user_agent': request.headers.get('User-Agent', 'Not set'),
+        'host': request.headers.get('Host', 'Not set'),
+        'referer': request.headers.get('Referer', 'Not set'),
+    }
+
     # Database information
     db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', 'Not configured')
     db_info = {
@@ -105,6 +116,7 @@ def dev_dashboard():
                          votes=votes,
                          system_info=system_info,
                          app_info=app_info,
+                         client_info=client_info,
                          web_logs=web_logs,
                          nginx_access_log=nginx_access_log,
                          nginx_error_log=nginx_error_log,

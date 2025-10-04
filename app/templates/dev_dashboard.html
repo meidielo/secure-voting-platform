@@ -97,6 +97,29 @@
         </div>
     </div>
 
+    <!-- Client Connection Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-network-wired"></i> Client Connection Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            {% for key, value in client_info.items() %}
+                            <tr>
+                                <td><strong>{{ key|replace('_', ' ')|title }}</strong></td>
+                                <td style="word-break: break-all; white-space: normal;">{{ value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Database Information -->
     <div class="row mb-4">
         <div class="col-12">
