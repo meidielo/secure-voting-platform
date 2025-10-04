@@ -5,3 +5,4 @@ PyMySQL
 gunicorn
 cryptography
 psutil
+geoip2
