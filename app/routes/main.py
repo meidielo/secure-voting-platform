@@ -4,6 +4,7 @@ from app import db
 from app.models import User, Candidate, Vote
 from datetime import datetime
 import hashlib
+from sqlalchemy.exc import IntegrityError
 
 main = Blueprint('main', __name__)
 
@@ -47,8 +48,16 @@ def vote():
     # Mark user as voted
     current_user.has_voted = True
     
-    db.session.add(vote)
-    db.session.commit()
+    # Persist vote and user state in a transaction. If another concurrent
+    # request already recorded a vote for this user, the unique constraint
+    # on Vote.user_id will raise IntegrityError which we catch and handle.
+    try:
+        db.session.add(vote)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash('Duplicate vote detected; your vote was not recorded again.')
+        return redirect(url_for('main.dashboard'))
     
     flash('Vote cast successfully!')
     return redirect(url_for('main.dashboard'))
