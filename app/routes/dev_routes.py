@@ -6,6 +6,7 @@ This file contains development-only routes that should NEVER be enabled in produ
 from flask import Blueprint, render_template, request
 from app import db
 from app.models import User, Candidate, Vote
+from app.security import get_client_ip, is_ip_allowed
 import os
 import platform
 import psutil
@@ -19,15 +20,16 @@ dev = Blueprint('dev', __name__, url_prefix='/dev')
 def dev_dashboard():
     """Developer dashboard - LOCAL DEVELOPMENT ONLY"""
     # Get real client IP (handle proxy/load balancer)
-    forwarded_for = request.headers.get('X-Forwarded-For', request.remote_addr)
-    client_ip = forwarded_for.split(',')[0].strip() if forwarded_for else request.remote_addr
+    client_ip = get_client_ip(request)
     
     # For development, also allow requests from nginx container network
-    allowed_ips = ['127.0.0.1', 'localhost', '::1', '172.24.0.1']  # nginx container IP
+    allowed_ips = ['127.0.0.1', '::1', '172.16.0.0/12']
     
-    # Only allow access from localhost or nginx proxy
-    if client_ip not in allowed_ips:
-        return f"Access denied: Developer dashboard only available locally (client IP: {client_ip}, forwarded: {forwarded_for})", 403
+    # Check if client IP is allowed (supports both individual IPs and CIDR subnets)
+    if not is_ip_allowed(client_ip, allowed_ips):
+        forwarded_header = request.headers.get('X-Forwarded-For', 'Not set')
+        current_app.logger.warning(f"Dev dashboard access denied - Client IP: {client_ip}, Forwarded: {forwarded_header}, Allowed IPs: {allowed_ips}")
+        return f"Access denied: Developer dashboard only available locally (client IP: {client_ip}, forwarded: {forwarded_header})", 403
 
     # Database contents
     users = User.query.all()

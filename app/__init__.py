@@ -52,10 +52,12 @@ def create_app(test_config=None):
     login_manager.init_app(app)
 
     # import blueprints (auth and main routes already in repo)
-    from app import auth, routes, dev_routes
+    from app import auth
+    from app.routes import main, dev_routes, health
     app.register_blueprint(auth.auth)
-    app.register_blueprint(routes.main)
+    app.register_blueprint(main.main)
     app.register_blueprint(dev_routes.dev)
+    app.register_blueprint(health.health)
 
     # create database tables if they don't exist
     with app.app_context():
