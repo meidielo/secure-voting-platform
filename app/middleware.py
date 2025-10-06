@@ -1,9 +1,20 @@
+
 from flask import request, abort, current_app
 from .geo_service import geoip_service
 import os
+import logging
+
+# read .env file for environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 # --- FEATURE FLAG ---
 GEO_FILTER_ENABLED = os.getenv('GEO_FILTER_ENABLED') == 'True'
+
+if GEO_FILTER_ENABLED:
+    logging.info(" 🌏🟢 Geo-filtering is enabled")
+else:
+    logging.info(" 🌏🔴 Geo-filtering is disabled")
 
 def check_geo_ip():
     """

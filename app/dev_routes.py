@@ -14,6 +14,7 @@ from flask import current_app
 from datetime import datetime
 
 dev = Blueprint('dev', __name__, url_prefix='/dev')
+main = Blueprint('main', __name__)
 
 @dev.route('/dashboard')
 def dev_dashboard():

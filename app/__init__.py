@@ -4,8 +4,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 
-from .middleware import check_geo_ip
-
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
@@ -13,8 +11,7 @@ login_manager.login_view = 'auth.login'
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True, template_folder='templates')
-    #tell flask to run the geo-ip check before each request
-    app.before_request(check_geo_ip)
+
     # register blureprints and other stuff here
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
@@ -55,6 +52,10 @@ def create_app(test_config=None):
     werkzeug_logger = logging.getLogger('werkzeug')
     werkzeug_logger.setLevel(logging.INFO)
     werkzeug_logger.addHandler(console)
+
+    # Import middleware and register geo-ip check after logging is set up
+    from .middleware import check_geo_ip
+    app.before_request(check_geo_ip)
 
     db.init_app(app)
     login_manager.init_app(app)

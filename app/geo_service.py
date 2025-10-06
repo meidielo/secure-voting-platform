@@ -11,6 +11,7 @@ class GeoIPService:
         """Initializes the service by loading the GeoIP database."""
         try:
             self.reader = geoip2.database.Reader(db_path)
+            logging.info(f" 🌏 GeoIP database loaded from '{db_path}'.")
         except FileNotFoundError:
             self.reader = None
             logging.critical(f"CRITICAL: GeoIP database not found at '{db_path}'. Geo-filtering is disabled.")
@@ -29,14 +30,15 @@ class GeoIPService:
             user_country_code = response.country.iso_code
             
             if user_country_code in ALLOWED_COUNTRIES:
+                logging.info(f" 🌏✅ Geo-filter pass: Allowed request from IP {ip_address} in country {user_country_code}.")
                 return True
             else:
-                logging.warning(f"Geo-filter block: Denied request from IP {ip_address} in country {user_country_code}.")
+                logging.warning(f" 🌏❌ Geo-filter block: Denied request from IP {ip_address} in country {user_country_code}.")
                 return False
 
         except geoip2.errors.AddressNotFoundError:
             # This occurs for private/local IPs, which we should always allow.
-            logging.info(f"Request from a local/private IP address: {ip_address}. Allowing.")
+            logging.info(f" 🌏🧑‍💻✅ Request from a local/private IP address: {ip_address}. Allowing.")
             return True
 
 # Create a single instance of the service to be used by the app
