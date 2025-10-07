@@ -1,13 +1,13 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, make_response, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 import logging
 from app import db
 from app.models import User
 import time
+from app.security.jwt_helpers import issue_token
 
 # --- Blueprint Setup ---
 auth = Blueprint('auth', __name__)
-
 
 # --- LOGIN ROUTE ---
 # All geo-filtering logic has been removed from this file. It is now handled
@@ -32,7 +32,7 @@ def login():
 
         # --- Step 1: user must exist ---
         user = User.query.filter_by(username=username).first()
-        
+
         if not user:
             flash('User not found')
             return render_template('login.html', prev_username=username)
@@ -80,8 +80,16 @@ def login():
             session.pop(k, None)
 
         login_user(user)
-        next_page = request.args.get('next')
-        return redirect(next_page or url_for('main.dashboard'))
+
+        # issue JWT session token and set as secure HttpOnly cookie
+        token = issue_token(user.id)
+        resp = make_response(redirect(request.args.get('next') or url_for('main.dashboard')))
+        # cookie settings mirror app config but allow override via env
+        secure = bool(int(current_app.config.get('SESSION_COOKIE_SECURE', 0)))
+        samesite = current_app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')
+        resp.set_cookie('session_token', token, httponly=True, secure=secure, samesite=samesite)
+            
+        return resp
 
     return render_template('login.html')
 
@@ -92,8 +100,6 @@ def login():
 def logout():
     logout_user()
     flash('You have been successfully logged out.')
-    return redirect(url_for('auth.login'))
-
-# Note: The geo-filtering logic has been moved to middleware.py and is applied
-# globally to all routes via app/__init__.py. This keeps the authentication
-# code clean and focused on its primary purpose.
+    resp = make_response(redirect(url_for('auth.login')))
+    resp.delete_cookie('session_token')
+    return resp
