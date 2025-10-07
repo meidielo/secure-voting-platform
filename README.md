@@ -1,4 +1,6 @@
-# Secure Software Systems - Assignment 3
+# notAEC - Secure Voting System
+
+A secure online voting platform inspired by Australian electoral systems, featuring multi-factor authentication, geo-filtering, and comprehensive security measures.
 
 ## Local Development
 
@@ -20,6 +22,15 @@
 **Credentials:**
 - Admin: `admin` / `admin123`
 - Voter: `voter1` / `password123`
+
+## Scripts
+
+Utility scripts are located in the `scripts/` directory:
+
+- **Generate favicon:** Regenerate the ICO favicon with multiple sizes
+  ```bash
+  python scripts/generate_favicon.py
+  ```
 
 ## Environment Variables
 
