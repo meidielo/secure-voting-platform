@@ -5,8 +5,6 @@ from app.models import User, Candidate, Vote
 from datetime import datetime
 import hashlib
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.exc import IntegrityError
-
 main = Blueprint('main', __name__)
 
 @main.route('/')
