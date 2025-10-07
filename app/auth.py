@@ -49,6 +49,21 @@ def login():
             return render_template('login.html', prev_username=username)
           
 
+        # Check if MFA is enabled
+        if not current_app.config.get('ENABLE_MFA', False):
+            # Skip OTP, directly log in
+            login_user(user)
+
+            # issue JWT session token and set as secure HttpOnly cookie
+            token = issue_token(user.id)
+            resp = make_response(redirect(request.args.get('next') or url_for('main.dashboard')))
+            # cookie settings mirror app config but allow override via env
+            secure = bool(int(current_app.config.get('SESSION_COOKIE_SECURE', 0)))
+            samesite = current_app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')
+            resp.set_cookie('session_token', token, httponly=True, secure=secure, samesite=samesite)
+                
+            return resp
+
         # --- Step 3: OTP checks ---
         sess_code = session.get('otp_code')
         sess_user = session.get('otp_user')

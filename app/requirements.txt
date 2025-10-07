@@ -9,3 +9,4 @@ cryptography
 geoip2>=4.6.0
 psutil
 dotenv
+PyJWT==2.8.0
