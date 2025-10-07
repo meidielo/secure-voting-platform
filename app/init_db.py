@@ -1,38 +1,114 @@
-from app import create_app, db
-from app.models import User, Candidate, Vote
+# init_db.py
+from datetime import datetime, date
+from app import db
+from app.models import User, Role, Region, Candidate, ElectoralRoll
 
-app = create_app()
+# small helper so we don't duplicate rows
+def get_or_create(model, defaults=None, **kwargs):
+    obj = model.query.filter_by(**kwargs).first()
+    if obj:
+        return obj, False
+    params = {**(defaults or {}), **kwargs}
+    obj = model(**params)
+    db.session.add(obj)
+    return obj, True
 
-def init_database():
+def init_database(app):
     with app.app_context():
-        # Create tables
+        # 1) create tables
         db.create_all()
-        
-        # Create admin user
-        if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', email='admin@voting.com', is_admin=True)
-            admin.set_password('admin123')
-            db.session.add(admin)
-        
-        # Create sample voter
-        if not User.query.filter_by(username='voter1').first():
-            voter1 = User(username='voter1', email='voter1@email.com', is_admin=False)
-            voter1.set_password('password123')
-            db.session.add(voter1)
-        
-        # Create sample candidates
-        if Candidate.query.count() == 0:
-            candidates = [
-                Candidate(name='John Smith', party='Labor Party', position='House of Representatives', constituency='Sydney'),
-                Candidate(name='Sarah Johnson', party='Liberal Party', position='House of Representatives', constituency='Sydney'),
-                Candidate(name='Mike Brown', party='Greens', position='House of Representatives', constituency='Sydney'),
-            ]
-            db.session.add_all(candidates)
-        
-        db.session.commit()
-        print("Database initialized successfully!")
-        print("Admin credentials: username='admin', password='admin123'")
-        print("Voter credentials: username='voter1', password='password123'")
 
-if __name__ == '__main__':
+        # 2) seed roles
+        for name, desc in [
+            ("voter",    "Can cast one vote"),
+            ("delegate", "Manages candidates, cannot vote"),
+            ("manager",  "System admin, cannot vote"),
+        ]:
+            get_or_create(Role, description=desc, name=name)
+
+        # 3) seed regions
+        for rname in ["Sydney", "VIC east", "VIC west", "NSW", "SA"]:
+            get_or_create(Region, name=rname)
+
+        db.session.flush()  # ensure IDs exist for FKs
+
+        # quick lookups
+        voter_role    = Role.query.filter_by(name="voter").first()
+        delegate_role = Role.query.filter_by(name="delegate").first()
+        manager_role  = Role.query.filter_by(name="manager").first()
+        sydney        = Region.query.filter_by(name="Sydney").first()
+
+        # 4) users (NOTE: __tablename__ for User should be "user")
+        if not User.query.filter_by(username="admin").first():
+            admin = User(
+                username="admin",
+                email="admin@voting.com",
+                role=manager_role,
+                has_voted=False,
+                created_at=datetime.utcnow(),
+            )
+            admin.set_password("admin123")
+            db.session.add(admin)
+
+        if not User.query.filter_by(username="delegate1").first():
+            delegate1 = User(
+                username="delegate1",
+                email="delegate1@voting.com",
+                role=delegate_role,
+                has_voted=False,
+                created_at=datetime.utcnow(),
+            )
+            delegate1.set_password("delegate123")
+            db.session.add(delegate1)
+
+        if not User.query.filter_by(username="voter1").first():
+            voter1 = User(
+                username="voter1",
+                email="voter1@voting.com",
+                role=voter_role,
+                has_voted=False,
+                created_at=datetime.utcnow(),
+            )
+            voter1.set_password("password123")
+            db.session.add(voter1)
+
+        db.session.flush()
+        voter1 = User.query.filter_by(username="voter1").first()  # refresh to ensure id
+
+        # 5) electoral roll entry for voter1 (active & verified in Sydney)
+        if voter1 and not ElectoralRoll.query.filter_by(user_id=voter1.id).first():
+            er = ElectoralRoll(
+                roll_number="ER-0001",
+                driver_license_number="DL12345678",
+                full_name="Voter One",
+                date_of_birth=date(1990, 5, 10),
+                address_line1="1 King St",
+                suburb="Sydney",
+                state="NSW",
+                postcode="2000",
+                region_id=sydney.id,
+                status="active",
+                verified=True,
+                verified_at=datetime.utcnow(),
+                user_id=voter1.id,
+            )
+            db.session.add(er)
+
+        # 6) candidates (use region_id, not constituency)
+        if Candidate.query.count() == 0:
+            db.session.add_all([
+                Candidate(name="John Smith",   party="Labor Party",   position="House of Representatives", region_id=sydney.id),
+                Candidate(name="Sarah Johnson", party="Liberal Party", position="House of Representatives", region_id=sydney.id),
+                Candidate(name="Mike Brown",   party="Greens",        position="House of Representatives", region_id=sydney.id),
+            ])
+
+        db.session.commit()
+
+        print("✅ Database initialized")
+        print("Logins you can use:")
+        print("  manager  → admin / admin123")
+        print("  delegate → delegate1 / delegate123")
+        print("  voter    → voter1 / password123")
+
+if __name__ == "__main__":
     init_database()

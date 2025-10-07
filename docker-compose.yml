@@ -60,6 +60,8 @@ services:
       retries: 20
     networks:
       - db_net
+    ports:
+      - "33306:3306"
     restart: unless-stopped
     logging:
       driver: json-file

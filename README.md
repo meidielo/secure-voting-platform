@@ -15,8 +15,9 @@
 3. **Access:** `http://localhost:5000`
 
 **Credentials:**
-- Admin: `admin` / `admin123`
-- Voter: `voter1` / `password123`
+ - Manager: admin / admin123
+ - Delegate: delegate1 / delegate123
+ - Voter: voter1 / password123
 
 ## Docker Setup
 

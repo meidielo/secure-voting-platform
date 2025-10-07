@@ -51,12 +51,12 @@ def runner(app):
 def _create_test_data():
     """Create test data for smoke tests."""
     # Create admin user (matching init_db.py)
-    admin = User(username='admin', email='admin@voting.com', is_admin=True)
+    admin = User(username='admin', email='admin@voting.com', is_manager=True)
     admin.set_password('admin123')
     db.session.add(admin)
     
     # Create sample voter (matching init_db.py)
-    voter1 = User(username='voter1', email='voter1@email.com', is_admin=False)
+    voter1 = User(username='voter1', email='voter1@email.com', is_manager=False)
     voter1.set_password('password123')
     db.session.add(voter1)
     
