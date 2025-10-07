@@ -26,20 +26,14 @@
 The application uses environment variables for configuration. Copy `.env.example` to `.env` and adjust as needed.
 
 Key variables:
-- `SECRET_KEY`: Flask secret key for sessions (use a secure random key in production)
-- `DATABASE_URL`: Database connection string (leave unset for SQLite in development, set for MySQL in Docker)
 - `GEO_FILTER_ENABLED`: Enable/disable geo-filtering based on IP country (default: True)
-- `ALLOWED_COUNTRIES`: Comma-separated list of allowed country codes (default: AU)
-- `ALLOWED_IPS`: Comma-separated list of allowed IP addresses/ranges for authentication
-- `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 - `ENABLE_MFA`: Enable/disable multi-factor authentication with OTP emails (default: False)
-- `MAIL_SERVER`: SMTP server for sending OTP emails (default: smtp.gmail.com)
-- `MAIL_PORT`: SMTP port for email server (default: 587)
-- `MAIL_USE_TLS`: Use TLS encryption for email (default: True)
-- `MAIL_USE_SSL`: Use SSL encryption for email (default: False)
 - `MAIL_USERNAME`: Email account username for sending OTP emails
 - `MAIL_PASSWORD`: Email account password/app password for sending OTP emails
-- `MAIL_DEFAULT_SENDER`: Default sender email address (defaults to MAIL_USERNAME)
+
+- `SECRET_KEY`: Flask secret key for sessions (use a secure random key in production)
+- `DATABASE_URL`: Database connection string (leave unset for SQLite in development, set for MySQL in Docker)
+- `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
 For geo-filtering to work, download the GeoLite2-Country.mmdb database from MaxMind and place it in the `data/` directory.
 
@@ -49,10 +43,8 @@ To enable multi-factor authentication with email-based OTP:
 
 1. Set `ENABLE_MFA=True` in your `.env` file
 2. Configure email settings:
-   - `MAIL_USERNAME`: Your email address
-   - `MAIL_PASSWORD`: Your email password or app-specific password
-   - `MAIL_SERVER`: Your email provider's SMTP server (gmail.com, outlook.com, etc.)
-   - `MAIL_PORT`: SMTP port (587 for TLS, 465 for SSL)
+   - `MAIL_USERNAME`: see the project chat
+   - `MAIL_PASSWORD`: see the project chat
 
 **Gmail example:**
 ```bash
