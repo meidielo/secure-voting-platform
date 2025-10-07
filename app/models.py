@@ -41,9 +41,7 @@ class Vote(db.Model):
     vote_hash = db.Column(db.String(64))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    __table_args__ = (
-        db.UniqueConstraint('user_id', name='uq_vote_user'),
-    )
+    # Note: additional constraints should be added above in the single __table_args__ block
 
 @login_manager.user_loader
 def load_user(user_id):
