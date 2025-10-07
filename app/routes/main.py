@@ -51,17 +51,12 @@ def vote():
     # request already recorded a vote for this user, the unique constraint
     # on Vote.user_id will raise IntegrityError which we catch and handle.
     try:
-        try:
-            db.session.add(vote)
-            # Mark user as voted before commit to keep app and DB in sync
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            flash('You have already voted!')
-            return redirect(url_for('main.dashboard'))
+        db.session.add(vote)
+        # Mark user as voted before commit to keep app and DB in sync
+        db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        flash('Duplicate vote detected; your vote was not recorded again.')
+        flash('You have already voted!')
         return redirect(url_for('main.dashboard'))
     
     flash('Vote cast successfully!')
