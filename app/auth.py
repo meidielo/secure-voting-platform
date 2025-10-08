@@ -111,10 +111,12 @@ def login():
 
 # --- LOGOUT ROUTE ---
 @auth.route('/logout')
-@login_required
 def logout():
     logout_user()
     flash('You have been successfully logged out.')
+    # Clear the session completely
+    session.clear()
     resp = make_response(redirect(url_for('auth.login')))
-    resp.delete_cookie('session_token')
+    resp.delete_cookie('otp_session')  # Clear Flask session cookie (OTP data)
+    resp.delete_cookie('session_token')  # Clear JWT token cookie
     return resp

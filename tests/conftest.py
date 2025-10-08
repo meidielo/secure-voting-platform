@@ -5,6 +5,10 @@ from app import create_app, db
 from app.models import User, Candidate, Vote
 
 
+def pytest_addoption(parser):
+    parser.addoption("--base-url", action="store", default="http://localhost", help="Base URL for integration tests")
+
+
 @pytest.fixture
 def app():
     """Create and configure a test app instance."""
