@@ -79,6 +79,9 @@ export MAIL_PASSWORD="abcd efgh ijkl mnop"
 1. **Install test dependencies:**
    ```bash
    pip install -r requirements-dev.txt
+
+   # or (recommended)
+   python -m pip install -r requirements-dev.txt
    ```
 
 2. **Run tests:**

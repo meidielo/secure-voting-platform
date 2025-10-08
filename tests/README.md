@@ -124,6 +124,9 @@ docker-compose logs -f
 # Install dependencies
 pip install -r requirements-dev.txt
 
+# or (recommended)
+python -m pip install -r requirements-dev.txt
+
 # Start Flask app
 python run_demo.py
 
