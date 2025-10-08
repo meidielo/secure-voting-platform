@@ -1,31 +1,49 @@
-import os
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from pathlib import Path
+from flask import current_app
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.exceptions import InvalidSignature
 
-# --- KEY LOADING ---
-# In a real app, load these from a secure location (e.g., environment variables or a secrets manager)
-# For this project, we'll assume they are in the 'instance' folder.
-INSTANCE_FOLDER = os.path.join(os.path.dirname(__file__), '..', '..', 'instance')
+# --- KEY STORAGE ---
+# We will load the keys into these global variables the first time they are needed.
+_private_key = None
+_public_key = None
 
-try:
-    with open(os.path.join(INSTANCE_FOLDER, "private_key.pem"), "rb") as key_file:
-        PRIVATE_KEY = serialization.load_pem_private_key(key_file.read(), password=None)
+def load_keys():
+    """
+    Loads keys from the Flask instance folder. This function is called automatically
+    when signing or verifying for the first time.
+    """
+    global _private_key, _public_key
 
-    with open(os.path.join(INSTANCE_FOLDER, "public_key.pem"), "rb") as key_file:
-        PUBLIC_KEY = serialization.load_pem_public_key(key_file.read())
-except FileNotFoundError:
-    PRIVATE_KEY = None
-    PUBLIC_KEY = None
-    print("WARNING: Key files not found. Signing and verification will fail.")
+    # Use Flask's standard way of finding the instance folder.
+    # This correctly resolves to /app/instance inside Docker.
+    instance_path = Path(current_app.instance_path)
+    private_key_path = instance_path / "private_key.pem"
+    public_key_path = instance_path / "public_key.pem"
+
+    try:
+        with open(private_key_path, "rb") as key_file:
+            _private_key = serialization.load_pem_private_key(key_file.read(), password=None)
+
+        with open(public_key_path, "rb") as key_file:
+            _public_key = serialization.load_pem_public_key(key_file.read())
+    except FileNotFoundError as e:
+        # This will give a much clearer error in the logs if files are missing.
+        current_app.logger.error(f"FATAL: Could not load key files: {e}")
+        _private_key = None
+        _public_key = None
 
 
 def sign_data(data: bytes) -> bytes:
-    """Signs the given data using the AEC's private key."""
-    if not PRIVATE_KEY:
-        raise RuntimeError("Private key is not loaded.")
+    """Signs the given data using the app's private key."""
+    if _private_key is None:
+        load_keys()  # Attempt to load the keys on first use.
+
+    if not _private_key:
+        raise RuntimeError("Private key is not loaded. Check application logs for errors.")
         
-    signature = PRIVATE_KEY.sign(
+    signature = _private_key.sign(
         data,
         padding.PSS(
             mgf=padding.MGF1(hashes.SHA256()),
@@ -36,12 +54,15 @@ def sign_data(data: bytes) -> bytes:
     return signature
 
 def verify_signature(data: bytes, signature: bytes) -> bool:
-    """Verifies a signature against the data using the AEC's public key."""
-    if not PUBLIC_KEY:
-        raise RuntimeError("Public key is not loaded.")
+    """Verifies a signature against the data using the app's public key."""
+    if _public_key is None:
+        load_keys()  # Attempt to load the keys on first use.
+
+    if not _public_key:
+        raise RuntimeError("Public key is not loaded. Check application logs for errors.")
 
     try:
-        PUBLIC_KEY.verify(
+        _public_key.verify(
             signature,
             data,
             padding.PSS(
