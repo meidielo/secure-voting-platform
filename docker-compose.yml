@@ -48,8 +48,6 @@ services:
     image: mysql:8.0
     platform: linux/amd64
     container_name: voting_db
-    ports:
-      - "33306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: votingdb
@@ -66,6 +64,8 @@ services:
       retries: 20
     networks:
       - db_net
+    ports:
+      - "33306:3306"
     restart: unless-stopped
     logging:
       driver: json-file

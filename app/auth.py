@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, login_required, current_user
 import logging
 from app import db
-from app.models import User
+from app.models import User, Role
 import time
 from app.security.jwt_helpers import issue_token
 
@@ -56,7 +56,17 @@ def login():
 
             # issue JWT session token and set as secure HttpOnly cookie
             token = issue_token(user.id)
-            resp = make_response(redirect(request.args.get('next') or url_for('main.dashboard')))
+
+            # role-based redirect
+            if user.is_manager:
+                dashboard_url = url_for('dev.dev_dashboard')  # manager dashboard
+            elif user.is_delegate:
+                dashboard_url = url_for('main.delegate_dashboard')
+            else:
+                dashboard_url = url_for('main.dashboard')
+
+            resp = make_response(redirect(request.args.get('next') or dashboard_url))
+
             # cookie settings mirror app config but allow override via env
             secure = bool(int(current_app.config.get('SESSION_COOKIE_SECURE', 0)))
             samesite = current_app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')

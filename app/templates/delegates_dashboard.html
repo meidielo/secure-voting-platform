@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}Delegate Dashboard | CivicVote{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0">
+        Delegate Dashboard
+        <small class="text-muted fs-6">Manage candidates for your region</small>
+      </h2>
+      <div>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-info" role="alert">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Summary strip -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Signed in as</div>
+              <div class="fw-bold">{{ current_user.username }}</div>
+            </div>
+            <i class="fa-solid fa-user-tie fa-lg text-muted"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Region</div>
+              <div class="fw-bold">{{ delegate_region.name if delegate_region else "Unassigned" }}</div>
+            </div>
+            <i class="fa-solid fa-location-dot fa-lg text-muted"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Candidates in region</div>
+              <div class="fw-bold">{{ candidates|length }}</div>
+            </div>
+            <i class="fa-solid fa-users-rectangle fa-lg text-muted"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create candidate -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white">
+        <strong>Add Candidate</strong>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('candidates.create_candidate') }}">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Name</label>
+              <input type="text" name="name" class="form-control" required />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Party</label>
+              <input type="text" name="party" class="form-control" placeholder="Optional" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Position</label>
+              <input type="text" name="position" class="form-control" required />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Region</label>
+              <select name="region_id" class="form-select" required>
+                {% for r in regions %}
+                  <option value="{{ r.id }}" {% if delegate_region and r.id == delegate_region.id %}selected{% endif %}>
+                    {{ r.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="fa-solid fa-plus"></i> Create
+            </button>
+            <a href="{{ url_for('main.delegate_dashboard') }}" class="btn btn-outline-secondary">Reset</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- List candidates -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>Candidates in {{ delegate_region.name if delegate_region else "your region" }}</strong>
+        <span class="text-muted small">Total: {{ candidates|length }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Party</th>
+              <th>Position</th>
+              <th>Region</th>
+              <th style="width: 220px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in candidates %}
+            <tr>
+              <td class="fw-semibold">{{ c.name }}</td>
+              <td>{{ c.party or "-" }}</td>
+              <td>{{ c.position }}</td>
+              <td>{{ c.region.name }}</td>
+              <td>
+                <div class="d-flex gap-2">
+                  <!-- EDIT triggers modal -->
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editCandidateModal"
+                    data-id="{{ c.id }}"
+                    data-name="{{ c.name }}"
+                    data-party="{{ c.party or '' }}"
+                    data-position="{{ c.position }}"
+                    data-region="{{ c.region_id }}"
+                  >
+                    <i class="fa-regular fa-pen-to-square"></i> Edit
+                  </button>
+
+                  <!-- DELETE -->
+                  <form method="post" action="{{ url_for('candidates.delete_candidate', candidate_id=c.id) }}"
+                        onsubmit="return confirm('Delete {{ c.name }}?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                      <i class="fa-regular fa-trash-can"></i> Delete
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-muted">No candidates yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Edit Candidate Modal -->
+<div class="modal fade" id="editCandidateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" id="editCandidateForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit candidate</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Name</label>
+            <input name="name" id="edit-name" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Party</label>
+            <input name="party" id="edit-party" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Position</label>
+            <input name="position" id="edit-position" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Region</label>
+            <select name="region_id" id="edit-region" class="form-select" required>
+              {% for r in regions %}
+                <option value="{{ r.id }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal wiring script -->
+<script>
+document.getElementById('editCandidateModal')
+  .addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    const id = btn.getAttribute('data-id');
+    const name = btn.getAttribute('data-name') || '';
+    const party = btn.getAttribute('data-party') || '';
+    const position = btn.getAttribute('data-position') || '';
+    const regionId = btn.getAttribute('data-region') || '';
+
+    // set action URL
+    const form = document.getElementById('editCandidateForm');
+    form.action = `/candidates/${id}/update`;
+
+    // prefill fields
+    document.getElementById('edit-name').value = name;
+    document.getElementById('edit-party').value = party;
+    document.getElementById('edit-position').value = position;
+
+    const sel = document.getElementById('edit-region');
+    [...sel.options].forEach(o => o.selected = (o.value === String(regionId)));
+  });
+</script>
+{% endblock %}

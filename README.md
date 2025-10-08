@@ -8,7 +8,7 @@ A secure online voting platform inspired by Australian electoral systems, featur
    ```bash
    pip install -r requirements.txt
 
-   # or
+   # or (recommended)
    python -m pip install -r requirements.txt
    ```
 
@@ -20,8 +20,9 @@ A secure online voting platform inspired by Australian electoral systems, featur
 3. **Access:** `http://localhost:5000`
 
 **Credentials:**
-- Admin: `admin` / `admin123`
-- Voter: `voter1` / `password123`
+ - Manager: admin / admin123
+ - Delegate: delegate1 / delegate123
+ - Voter: voter1 / password123
 
 ## Scripts
 
@@ -102,8 +103,6 @@ export ENABLE_MFA="True"
    python run_tests.py
    ```
 
-**Note:** All 27 tests (13 smoke + 11 integration + 16 WAF security) should pass.
-
 📖 **Detailed testing guide:** See [`tests/README.md`](tests/README.md) for comprehensive testing documentation, including security test validation and debugging examples.
 
 ## Security Features
@@ -124,3 +123,17 @@ $ curl -X POST http://localhost/vote -d "candidate_id=2"
 </body>
 </html>
 ```
+
+## DB
+
+### Refreshing the DB
+
+To reset the database, run:
+
+```bash
+docker-compose down
+docker volume rm sec-soft-sys-a3_db_data
+docker-compose up -d
+```
+
+This will delete all existing data and start with a fresh database.
