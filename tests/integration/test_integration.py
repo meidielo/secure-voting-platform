@@ -212,13 +212,15 @@ class TestAPIFunctionality:
 
     def test_admin_cannot_vote(self, clean_session):
         """Test admin cannot vote (only voters can)."""
-        clean_session.login('admin', 'admin123')
+        login_success = clean_session.login('admin', 'admin123')
+        assert login_success, "Admin should be able to login"
 
-        # Try to vote
-        response = clean_session.post('/vote', data={'candidate_id': 1})
-        # Should redirect to dashboard
-        assert response.status_code == 302, "Admin should be redirected when trying to vote"
-        assert 'dashboard' in response.headers.get('Location', '')
+        # Try to vote - don't follow redirects so we can see the 302
+        response = clean_session.post('/vote', data={'candidate_id': 1}, allow_redirects=False)
+        
+        # Should redirect to dashboard with ineligibility message
+        assert response.status_code == 302, f"Admin should be redirected when trying to vote, got {response.status_code}"
+        assert 'dashboard' in response.headers.get('Location', ''), f"Should redirect to dashboard, got {response.headers.get('Location')}"
 
     def test_voter_can_vote(self, clean_session):
         """Test voter can cast a vote.
