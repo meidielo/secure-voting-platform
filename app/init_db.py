@@ -65,6 +65,9 @@ def init_database(app):
                 )
                 admin.set_password("admin123")
                 db.session.add(admin)
+            else:
+                admin = User.query.filter_by(username="admin").first()
+                admin.email = "secsoftsysa3@myyahoo.com"
 
             if not User.query.filter_by(username="delegate1").first():
                 delegate1 = User(
