@@ -180,10 +180,6 @@ class HTTPTestRunner:
         }
 
 
-def pytest_addoption(parser):
-    parser.addoption("--base-url", action="store", default="http://localhost", help="Base URL for integration tests")
-
-
 @pytest.fixture(scope="session")
 def http_runner(request):
     """Pytest fixture providing HTTP test runner instance."""
