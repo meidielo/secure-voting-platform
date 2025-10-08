@@ -112,7 +112,7 @@ class TestAPIFunctionality:
 
         response = clean_session.get('/dashboard')
         assert response.status_code == 200, "Authenticated user should access dashboard"
-        assert 'dashboard' in response.text.lower()
+        assert 'welcome' in response.text.lower()
 
     def test_admin_only_results_access(self, clean_session):
         """Test only admins can access results."""
