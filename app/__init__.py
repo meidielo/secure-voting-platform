@@ -67,6 +67,8 @@ def create_app(test_config=None):
     from app import auth
     from app.routes import main, dev_routes, health
     from app.routes.otp import otp_bp   # Create OTP blueprint
+    from .results import results as results_blueprint
+    app.register_blueprint(results_blueprint)
     app.register_blueprint(auth.auth)
     app.register_blueprint(main.main)
     app.register_blueprint(dev_routes.dev)
@@ -79,3 +81,10 @@ def create_app(test_config=None):
         db.create_all()
 
     return app
+
+    def create_app():
+        # ... (your existing code)
+        
+
+        
+        return app
