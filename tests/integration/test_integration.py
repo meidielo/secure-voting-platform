@@ -201,7 +201,24 @@ class TestAPIFunctionality:
         assert 'welcome' in response.text.lower()
 
     def test_delegate_cannot_vote(self, clean_session_with_retry):
-        """Test delegate cannot vote (only voters can)."""
+        """Test delegate cannot vote (only voters can).
+
+        This test ensures that delegate users, who have candidate management
+        privileges, cannot participate in voting. This separation of roles
+        maintains electoral integrity by preventing conflicts of interest
+        where delegates might vote for their own candidates.
+
+        Security layers tested:
+        - UI level: Delegate dashboard should not display voting interface
+        - API level: /vote endpoint should reject delegate requests
+        - Database level: Vote records should only accept voter role users
+
+        Expected behavior:
+        - Delegate login succeeds (authentication works)
+        - Vote attempt returns 302 redirect to dashboard
+        - No vote is recorded in the database
+        - Delegate receives appropriate feedback about ineligibility
+        """
         clean_session_with_retry.login('delegate1', 'delegate123')
 
         # Try to vote (assuming candidate_id=1 exists) - don't follow redirects
@@ -211,7 +228,24 @@ class TestAPIFunctionality:
         assert 'dashboard' in response.headers.get('Location', '')
 
     def test_admin_cannot_vote(self, clean_session_with_retry):
-        """Test admin cannot vote (only voters can)."""
+        """Test admin cannot vote (only voters can).
+
+        This test validates the critical security principle that administrative users
+        cannot participate in voting, even if they have full system access. This
+        prevents potential conflicts of interest and maintains the integrity of
+        the electoral process.
+
+        Security layers tested:
+        - UI level: Admin dashboard should not display voting interface
+        - API level: /vote endpoint should reject admin requests
+        - Database level: Vote records should only accept voter role users
+
+        Expected behavior:
+        - Admin login succeeds (authentication works)
+        - Vote attempt returns 302 redirect to dashboard
+        - No vote is recorded in the database
+        - Admin receives appropriate feedback about ineligibility
+        """
         login_success = clean_session_with_retry.login('admin', 'admin123')
         assert login_success, "Admin should be able to login"
 
