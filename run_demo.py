@@ -11,5 +11,5 @@ init_database(app)
 if __name__ == '__main__':
     # Disable the reloader to avoid multiple processes when running in background
     port = int(os.environ.get('PORT', '5000'))
-    print("MAIL USER:", os.environ.get("MAIL_USERNAME"))
+    print(" 📧👤 MAIL USER:", os.environ.get("MAIL_USERNAME"))
     app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)

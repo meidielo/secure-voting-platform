@@ -174,8 +174,8 @@ def init_database(app):
             db.session.rollback()
             raise
 
-        print("✅ Database initialized")
-        print("Logins you can use:")
+        print(" 🧀✅ Database initialized")
+        print(" 🧑‍💻 Logins you can use:")
         print("  manager  → admin / admin123")
         print("  delegate → delegate1 / delegate123")
         print("  voter    → voter1 / password123")
