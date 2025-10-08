@@ -34,7 +34,16 @@ def create_app(test_config=None):
 
         # MFA settings
         ENABLE_MFA=os.environ.get('ENABLE_MFA', 'False').lower() in ('true', '1', 'yes'),
+
+        # Proxy settings for running behind nginx
+        SESSION_COOKIE_NAME='otp_session',  # Rename session cookie for clarity
+        SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+        SESSION_COOKIE_SAMESITE='Lax',
     )
+
+    # Trust proxy headers when running behind nginx
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
     if test_config:
         app.config.update(test_config)
