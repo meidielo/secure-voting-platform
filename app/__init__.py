@@ -168,10 +168,3 @@ def create_app(test_config=None):
         return response
 
     return app
-
-    def create_app():
-        # ... (your existing code)
-        
-
-        
-        return app
