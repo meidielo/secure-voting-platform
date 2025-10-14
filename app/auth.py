@@ -279,40 +279,40 @@ def register():
             if detected_state_code and user_state_code != detected_state_code:
                 logging.warning(f"Registration geo-mismatch: user selected {user_state_code}, detected {detected_state_code} (IP).")
                 flash("Selected state does not match the detected location from your IP address. If you are using a VPN or the detection failed, contact an administrator for support.")
-                return render_template('register.html', prev_username=username, prev_email=email)
+                return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
 
         # Username
         if not USERNAME_RE.fullmatch(username):
             flash("Username must be 3-32 chars (letters, digits, _.-)")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
         if User.query.filter_by(username=username).first():
             flash("Username already taken")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
         # Email
         if not EMAIL_RE.fullmatch(email):
             flash("Invalid email format")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
         if User.query.filter_by(email=email).first():
             flash("Email already registered")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
         # Password
         if password != confirm:
             flash("Passwords do not match")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
         if not is_strong_password(password):
             flash("Password too weak: must be 8+ chars with letters and digits")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
         # Driver licence
         if not validate_driver_lic(lic_no, lic_state or None):
             flash("Invalid driver licence number")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
         if User.query.filter_by(driver_lic_no=lic_no).first():
             flash("Driver licence already bound to another account")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
         # Ensure voter role exists
         voter_role = Role.query.filter_by(name="voter").first()
@@ -359,7 +359,7 @@ def register():
         except Exception as e:
             db.session.rollback()
             flash(f"Failed to create user: {e}")
-            return render_template('register.html', prev_username=username, prev_email=email)
+            return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
         flash("Registration submitted. Waiting for admin approval.")
         return redirect(url_for('auth.login'))
