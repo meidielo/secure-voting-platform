@@ -2,11 +2,22 @@ services:
   web:
     build: ./app
     container_name: voting_web
+    ports:
+      # 8000 is mapped for direct access (bypass WAF)
+      # This would be disabled unless penetration testing of the bare app is being performed
+      # - bare testing should be done in a separate isolated environment (like this project)
+      # - in production this port would be closed to external access
+      # - only the WAF port (80) would be exposed externally
+      - "8000:8000" 
     expose:
       - "8000"
     environment:
       DATABASE_URL: mysql+pymysql://votinguser:votingpass@db:3306/votingdb
-      LOG_LEVEL: info              
+      GEO_FILTER_ENABLED: "True"
+      GEOIP_DB_PATH: /data/GeoLite2-Country.mmdb
+      LOG_LEVEL: info
+    volumes:
+      - ./data:/data
     depends_on:
       db:
         condition: service_healthy
@@ -22,12 +33,12 @@ services:
         tag: "{{.Name}}|{{.ImageName}}|{{.ID}}"
 
   waf:
-    image: nginx:latest
+    image: owasp/modsecurity-crs:nginx
     container_name: voting_waf
     ports:
       - "80:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/waf.conf:/etc/nginx/conf.d/waf.conf:ro
     depends_on:
       - web
     networks:
@@ -60,6 +71,8 @@ services:
       retries: 20
     networks:
       - db_net
+    ports:
+      - "33306:3306"
     restart: unless-stopped
     logging:
       driver: json-file
