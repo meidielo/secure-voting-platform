@@ -72,7 +72,7 @@ def init_database(app):
                     has_voted=False,
                     created_at=datetime.utcnow(),
                 )
-                admin.set_password("admin123")
+                admin.set_password("Admin@123456!")
                 db.session.add(admin)
             else:
                 admin = User.query.filter_by(username="admin").first()
@@ -86,7 +86,7 @@ def init_database(app):
                     has_voted=False,
                     created_at=datetime.utcnow(),
                 )
-                delegate1.set_password("delegate123")
+                delegate1.set_password("Delegate@123!")
                 db.session.add(delegate1)
 
             if not User.query.filter_by(username="voter1").first():
@@ -97,7 +97,7 @@ def init_database(app):
                     has_voted=False,
                     created_at=datetime.utcnow(),
                 )
-                voter1.set_password("password123")
+                voter1.set_password("Password@123!")
                 db.session.add(voter1)
 
             if not User.query.filter_by(username='lix').first():
@@ -108,7 +108,7 @@ def init_database(app):
                     has_voted=False,
                     created_at=datetime.utcnow(),
                 )
-                lix.set_password('password123')
+                lix.set_password('Password@123!')
                 db.session.add(lix)
         
             # add your own user here
