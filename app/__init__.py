@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 from flask import Flask
+from .metrics import metrics_bp
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail  
@@ -111,6 +112,11 @@ def create_app(test_config=None):
     app.register_blueprint(candidates.candidates)
     app.register_blueprint(registration.registration)
     app.register_blueprint(otp_bp)      # Register OTP blueprint
+    # expose Prometheus metrics at /metrics (metrics blueprint is optional)
+    try:
+        app.register_blueprint(metrics_bp)
+    except Exception:
+        app.logger.debug('metrics blueprint not registered')
     try:
         from app.routes.admin_users import admin_bp
         app.register_blueprint(admin_bp, url_prefix="/admin")
