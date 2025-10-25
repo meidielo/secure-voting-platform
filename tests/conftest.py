@@ -73,7 +73,8 @@ def _create_test_data():
         username='admin',
         email='admin@voting.com',
         driver_lic_no='DL123458',  # Valid driver license (checksum: 8)
-        driver_lic_state='NSW'
+        driver_lic_state='NSW',
+        account_status='approved'  # Admin is pre-approved
     )
     admin.role_id = manager_role.id
     admin.set_password('Admin@123456!')
@@ -84,7 +85,8 @@ def _create_test_data():
         username='voter1',
         email='voter1@email.com',
         driver_lic_no='VIC00014',  # Valid driver license (checksum: 4)
-        driver_lic_state='VIC'
+        driver_lic_state='VIC',
+        account_status='approved'  # Voter is pre-approved for testing
     )
     voter1.role_id = voter_role.id
     voter1.set_password('Password@123!')

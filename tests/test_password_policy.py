@@ -53,6 +53,8 @@ def test_user(app):
         user = User(
             username='testuser',
             email='test@example.com',
+            driver_lic_no='DL123458',
+            driver_lic_state='NSW',
             role_id=voter_role.id
         )
         user.set_password('TestPassword123!')

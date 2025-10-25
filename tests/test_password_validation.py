@@ -149,7 +149,7 @@ class TestUserModelPasswordValidation:
     def test_user_set_password_valid(self, app):
         """Test that valid password can be set on User model."""
         with app.app_context():
-            user = User(username="testuser", email="test@test.com")
+            user = User(username="testuser", email="test@test.com", driver_lic_no="DL123458", driver_lic_state="NSW")
             user.set_password("ValidPass123!")
             assert user.password_hash is not None
             assert user.check_password("ValidPass123!")
@@ -157,14 +157,14 @@ class TestUserModelPasswordValidation:
     def test_user_set_password_invalid_raises_error(self, app):
         """Test that invalid password raises PasswordValidationError."""
         with app.app_context():
-            user = User(username="testuser", email="test@test.com")
+            user = User(username="testuser", email="test@test.com", driver_lic_no="DL123459", driver_lic_state="NSW")
             with pytest.raises(PasswordValidationError):
                 user.set_password("weak")
     
     def test_user_set_password_too_short(self, app):
         """Test that short password is rejected."""
         with app.app_context():
-            user = User(username="testuser", email="test@test.com")
+            user = User(username="testuser", email="test@test.com", driver_lic_no="DL123460", driver_lic_state="NSW")
             with pytest.raises(PasswordValidationError) as exc_info:
                 user.set_password("Short1!")
             assert "12 characters" in str(exc_info.value)
@@ -172,7 +172,7 @@ class TestUserModelPasswordValidation:
     def test_user_set_password_no_uppercase(self, app):
         """Test that password without uppercase is rejected."""
         with app.app_context():
-            user = User(username="testuser", email="test@test.com")
+            user = User(username="testuser", email="test@test.com", driver_lic_no="DL123461", driver_lic_state="NSW")
             with pytest.raises(PasswordValidationError) as exc_info:
                 user.set_password("nouppercase123!")
             assert "uppercase" in str(exc_info.value)
@@ -180,7 +180,7 @@ class TestUserModelPasswordValidation:
     def test_user_set_password_no_special(self, app):
         """Test that password without special character is rejected."""
         with app.app_context():
-            user = User(username="testuser", email="test@test.com")
+            user = User(username="testuser", email="test@test.com", driver_lic_no="DL123462", driver_lic_state="NSW")
             with pytest.raises(PasswordValidationError) as exc_info:
                 user.set_password("NoSpecial123Abc")
             assert "special" in str(exc_info.value)
