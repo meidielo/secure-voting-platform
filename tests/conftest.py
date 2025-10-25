@@ -71,13 +71,13 @@ def _create_test_data():
     # Create admin user (matching init_db.py)
     admin = User(username='admin', email='admin@voting.com')
     admin.role_id = manager_role.id
-    admin.set_password('admin123')
+    admin.set_password('Admin@123456!')
     db.session.add(admin)
     
     # Create sample voter (matching init_db.py)
     voter1 = User(username='voter1', email='voter1@email.com')
     voter1.role_id = voter_role.id
-    voter1.set_password('password123')
+    voter1.set_password('Password@123!')
     db.session.add(voter1)
     db.session.commit()  # Commit to get user.id
     
