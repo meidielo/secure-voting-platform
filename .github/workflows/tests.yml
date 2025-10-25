@@ -50,6 +50,20 @@ jobs:
           echo "GEO_FILTER_ENABLED=False" >> $GITHUB_ENV
           echo "ENABLE_MFA=False" >> $GITHUB_ENV
 
+      - name: Wait for PostgreSQL
+        run: |
+          apt-get update && apt-get install -y postgresql-client
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U test_user; then
+              echo "PostgreSQL is ready"
+              exit 0
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 1
+          done
+          echo "PostgreSQL failed to start"
+          exit 1
+
       - name: Initialize database
         run: |
           python -c "
