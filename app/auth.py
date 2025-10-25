@@ -10,6 +10,7 @@ import re
 
 from app import db
 from app.models import User, Role, Region, ElectoralRoll
+from app.security.password_validator import validate_password_strength, PasswordValidationError
 import time
 from app.security.jwt_helpers import issue_token
 
@@ -24,15 +25,17 @@ EMAIL_RE    = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 def is_strong_password(pw: str) -> bool:
     """
-    Password policy for registration:
-      - At least 8 characters
-      - Must contain both letters and digits
+    Validate password strength using the centralized validator.
+    This ensures consistency across the application.
+    
+    Password requirements:
+    - Minimum 12 characters
+    - At least 1 uppercase letter
+    - At least 1 lowercase letter
+    - At least 1 special character
     """
-    if not pw or len(pw) < 8:
-        return False
-    has_letter = any(c.isalpha() for c in pw)
-    has_digit  = any(c.isdigit() for c in pw)
-    return has_letter and has_digit
+    is_valid, error_message = validate_password_strength(pw)
+    return is_valid
 
 def _checksum11(s: str) -> int:
     """
@@ -336,8 +339,11 @@ def register():
         if password != confirm:
             flash("Passwords do not match")
             return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
-        if not is_strong_password(password):
-            flash("Password too weak: must be 8+ chars with letters and digits")
+        
+        # Validate password strength using centralized validator
+        is_valid, error_message = validate_password_strength(password)
+        if not is_valid:
+            flash(f"Password too weak: {error_message}")
             return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
         # Driver licence
