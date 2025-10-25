@@ -51,8 +51,10 @@ class HTTPTestRunner:
         
         # Spoof a browser User-Agent to bypass CLI client blocking
         # (Server blocks curl, wget, httpie, python-requests, etc. for security)
+        # Also set default Referer for Origin/Referer validation checks
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': self.base_url + '/login'  # Default Referer for security checks
         })
 
         # Rate limiting protection - add delay between requests
