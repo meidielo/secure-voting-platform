@@ -28,6 +28,7 @@ jobs:
 
       - name: Set up environment variables (SQLite for testing)
         run: |
+          echo "DEPLOYMENT_ENV=testing" >> $GITHUB_ENV
           echo "FLASK_ENV=testing" >> $GITHUB_ENV
           echo "SECRET_KEY=test-secret-key-do-not-use-in-production" >> $GITHUB_ENV
           echo "GEO_FILTER_ENABLED=False" >> $GITHUB_ENV
