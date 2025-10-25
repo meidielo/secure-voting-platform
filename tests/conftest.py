@@ -69,13 +69,23 @@ def _create_test_data():
     db.session.commit()
     
     # Create admin user (matching init_db.py)
-    admin = User(username='admin', email='admin@voting.com')
+    admin = User(
+        username='admin',
+        email='admin@voting.com',
+        driver_lic_no='DL123458',  # Valid driver license (checksum: 8)
+        driver_lic_state='NSW'
+    )
     admin.role_id = manager_role.id
     admin.set_password('Admin@123456!')
     db.session.add(admin)
     
     # Create sample voter (matching init_db.py)
-    voter1 = User(username='voter1', email='voter1@email.com')
+    voter1 = User(
+        username='voter1',
+        email='voter1@email.com',
+        driver_lic_no='VIC00014',  # Valid driver license (checksum: 4)
+        driver_lic_state='VIC'
+    )
     voter1.role_id = voter_role.id
     voter1.set_password('Password@123!')
     db.session.add(voter1)
