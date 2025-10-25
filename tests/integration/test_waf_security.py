@@ -214,14 +214,14 @@ class TestWAFSecurityPenetration:
                 responses.append(response.status_code)
             except Exception as e:
                 responses.append('error')
-            time.sleep(0.2)
+            time.sleep(0.5)  # Increased delay to respect rate limits
 
         # Should see some normal responses and possibly some rate limited
         print(f"Rate limiting test responses: {responses}")
 
-        # At least some requests should succeed
+        # At least some requests should succeed (should get through with proper delays)
         success_count = sum(1 for r in responses if r in [200, 302, 404])
-        assert success_count > 0, "All requests were blocked - check rate limiting configuration"
+        assert success_count >= 3, f"Most requests were blocked/errored - got {success_count}/5. Responses: {responses}"
 
     def test_waf_rate_limiting_advanced(self, http_runner):
         """Advanced rate limiting configuration test.
@@ -253,6 +253,7 @@ class TestWAFSecurityPenetration:
                 general_responses.append(response.status_code)
             except Exception as e:
                 general_responses.append('error')
+            time.sleep(0.3)  # Increased delay between requests to respect rate limits
 
         general_success_count = sum(1 for r in general_responses if r in [200, 302])
         print(f"General endpoint: {general_success_count}/{len(general_responses)} successful requests")
@@ -267,6 +268,7 @@ class TestWAFSecurityPenetration:
                 voting_responses.append(response.status_code)
             except Exception as e:
                 voting_responses.append('error')
+            time.sleep(0.5)  # Increased delay for voting (stricter rate limit)
 
         voting_success_count = sum(1 for r in voting_responses if r in [200, 302, 404])
         print(f"Voting endpoint: {voting_success_count}/{len(voting_responses)} successful requests")
@@ -281,14 +283,20 @@ class TestWAFSecurityPenetration:
                 dev_responses.append(response.status_code)
             except Exception as e:
                 dev_responses.append('error')
+            time.sleep(0.1)  # Dev endpoints are less restricted
 
         dev_success_count = sum(1 for r in dev_responses if r in [200, 302, 404])
         print(f"Dev endpoint: {dev_success_count}/{len(dev_responses)} successful requests")
 
         # Verify that endpoints are accessible (WAF is not completely blocking)
-        assert general_success_count > 0, "General endpoint should be accessible"
-        assert voting_success_count >= 0, "Voting endpoint should not be completely blocked"
-        assert dev_success_count > 0, "Dev endpoint should be accessible"
+        # General should work with delays (rate limit is 200r/m = ~3.3/s, so 0.3s between requests should work)
+        assert general_success_count >= 5, f"General endpoint should be accessible with delays. Got {general_success_count}/10 successful"
+        
+        # Voting is more strict but shouldn't fail completely
+        assert voting_success_count >= 2, f"Voting endpoint should be accessible. Got {voting_success_count}/5 successful"
+        
+        # Dev should work well since it has looser limits and ModSecurity disabled
+        assert dev_success_count >= 8, f"Dev endpoint should be accessible. Got {dev_success_count}/10 successful"
 
         # Test that security headers are present (confirming WAF is active)
         response = http_runner.get('/login')

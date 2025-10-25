@@ -48,25 +48,87 @@ jobs:
           echo "🐳 Starting Docker containers..."
           docker compose up -d
           
-          # Wait for services to be healthy
-          echo "⏳ Waiting for services to be ready..."
-          for i in {1..60}; do
-            # Check if health endpoint responds
-            if curl -f http://localhost/healthz > /dev/null 2>&1; then
-              echo "✅ Services are ready!"
+          # Wait for database to be healthy first
+          echo "⏳ Waiting for database to be ready..."
+          max_attempts=60
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if docker compose exec -T db mysqladmin ping -h localhost -uroot -prootpass 2>/dev/null | grep -q "mysqld is alive"; then
+              echo "✅ Database is ready!"
               break
             fi
-            echo "⏳ Attempt $i/60: Waiting for services..."
+            attempt=$((attempt + 1))
+            if [ $((attempt % 10)) -eq 0 ]; then
+              echo "⏳ Database check attempt $attempt/$max_attempts..."
+            fi
             sleep 1
           done
           
-          # Run integration tests against Docker
+          if [ $attempt -ge $max_attempts ]; then
+            echo "❌ Database failed to become ready"
+            docker compose logs db --tail=50
+            exit 1
+          fi
+          
+          # Wait for app to respond to health checks
+          echo "⏳ Waiting for app to be ready..."
+          max_attempts=120
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            # Check if health endpoint responds with 200
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/healthz 2>/dev/null || echo "000")
+            if [ "$http_code" = "200" ]; then
+              echo "✅ App is ready! (HTTP $http_code)"
+              break
+            fi
+            attempt=$((attempt + 1))
+            if [ $((attempt % 20)) -eq 0 ]; then
+              echo "⏳ App health check attempt $attempt/$max_attempts... (current HTTP $http_code)"
+            fi
+            sleep 1
+          done
+          
+          if [ $attempt -ge $max_attempts ]; then
+            echo "❌ App failed to become ready after ${max_attempts}s"
+            echo "🔍 Checking Docker logs:"
+            echo "=== APP LOGS ==="
+            docker compose logs web --tail=50
+            echo "=== WAF LOGS ==="
+            docker compose logs waf --tail=30
+            echo "=== DB LOGS ==="
+            docker compose logs db --tail=20
+            exit 1
+          fi
+          
+          # Add small buffer for full initialization
+          sleep 2
+          
+          # Run health checks first
+          echo "🏥 Running health checks..."
           python -m pytest tests/integration/test_integration.py::TestHealthChecks -v --tb=short --base-url=http://localhost || TEST_RESULT=$?
+          
+          if [ ${TEST_RESULT:-0} -eq 0 ]; then
+            # Run full integration tests
+            echo "🧪 Running integration tests..."
+            python -m pytest tests/integration/test_integration.py -v --tb=short --base-url=http://localhost || TEST_RESULT=$?
+          fi
+          
+          # Run WAF security tests if all prior tests passed
+          if [ ${TEST_RESULT:-0} -eq 0 ]; then
+            echo "🔒 Running WAF security tests..."
+            python -m pytest tests/integration/test_waf_security.py -v --tb=short --base-url=http://localhost || WAF_RESULT=$?
+            TEST_RESULT=${WAF_RESULT:-${TEST_RESULT}}
+          fi
           
           # Show Docker logs for debugging if tests failed
           if [ ${TEST_RESULT:-0} -ne 0 ]; then
-            echo "❌ Tests failed. Docker logs:"
-            docker compose logs --tail=50
+            echo "❌ Tests failed. Dumping Docker logs for debugging..."
+            echo "=== APP LOGS (last 100 lines) ==="
+            docker compose logs web --tail=100
+            echo "=== WAF LOGS (last 50 lines) ==="
+            docker compose logs waf --tail=50
+            echo "=== DB LOGS (last 30 lines) ==="
+            docker compose logs db --tail=30
           fi
           
           # Cleanup
