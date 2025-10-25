@@ -2,9 +2,9 @@ name: Run Critical Tests
 
 on:
   push:
-    branches: [ main, develop, gotcha, "feature/**" ]
+    branches: ['**']
   pull_request:
-    branches: [ main, develop ]
+    branches: ['**']
 
 jobs:
   test:
