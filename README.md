@@ -35,6 +35,9 @@ A secure online voting platform inspired by Australian electoral systems, featur
  - Delegate: delegate1 / Delegate@123!
  - Voter: voter1 / Password@123!
 
+**Driver Licence:**
+- Try `DL123458`
+
 **Note:** All passwords must meet strong password requirements:
 - Minimum 12 characters
 - At least 1 uppercase letter (A-Z)
