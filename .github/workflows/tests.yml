@@ -11,21 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
       - uses: actions/checkout@v3
 
@@ -40,29 +25,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-          pip install psycopg2-binary
 
-      - name: Set up environment variables
+      - name: Set up environment variables (SQLite for testing)
         run: |
           echo "FLASK_ENV=testing" >> $GITHUB_ENV
-          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db" >> $GITHUB_ENV
           echo "SECRET_KEY=test-secret-key-do-not-use-in-production" >> $GITHUB_ENV
           echo "GEO_FILTER_ENABLED=False" >> $GITHUB_ENV
           echo "ENABLE_MFA=False" >> $GITHUB_ENV
-
-      - name: Wait for PostgreSQL
-        run: |
-          apt-get update && apt-get install -y postgresql-client
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U test_user; then
-              echo "PostgreSQL is ready"
-              exit 0
-            fi
-            echo "Waiting for PostgreSQL... ($i/30)"
-            sleep 1
-          done
-          echo "PostgreSQL failed to start"
-          exit 1
 
       - name: Initialize database
         run: |
