@@ -253,10 +253,8 @@ def clean_session(http_runner):
 
 @pytest.fixture(scope="function")
 def clean_session_with_retry(http_runner):
-    """Pytest fixture with automatic retry on rate limiting."""
+    """Pytest fixture for integration testing."""
     http_runner.session.cookies.clear()
-    # Add test mode header to relax rate limiting
-    http_runner.session.headers.update({'X-Test-Mode': '1'})
     yield http_runner
     http_runner.session.cookies.clear()
 

@@ -78,7 +78,7 @@ class TestAuthentication:
 
     def test_successful_admin_login(self, clean_session_with_retry):
         """Test successful admin login."""
-        success = clean_session_with_retry.login('admin', 'AdminSecurePass123!')
+        success = clean_session_with_retry.login('admin', 'Admin@123456!')
         assert success, "Admin login failed"
 
         # Verify authenticated
@@ -86,14 +86,14 @@ class TestAuthentication:
 
     def test_successful_voter_login(self, clean_session_with_retry):
         """Test successful voter login."""
-        success = clean_session_with_retry.login('voter1', 'VoterSecurePass123!')
+        success = clean_session_with_retry.login('voter1', 'Password@123!')
         assert success, "Voter login failed"
 
         assert clean_session_with_retry.is_authenticated(), "Not authenticated after login"
 
     def test_successful_delegate_login(self, clean_session_with_retry):
         """Test successful delegate login."""
-        success = clean_session_with_retry.login('delegate1', 'delegate123')
+        success = clean_session_with_retry.login('delegate1', 'Delegate@123!')
         assert success, "Delegate login failed"
 
         assert clean_session_with_retry.is_authenticated(), "Not authenticated after login"
