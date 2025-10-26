@@ -37,6 +37,12 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Build and start Docker containers
+        env:
+          DEPLOYMENT_ENV: testing
+          FLASK_ENV: testing
+          SECRET_KEY: test-secret-key-do-not-use-in-production
+          GEO_FILTER_ENABLED: "False"
+          ENABLE_MFA: "False"
         run: |
           echo "🐳 Starting Docker containers..."
           docker compose up -d
