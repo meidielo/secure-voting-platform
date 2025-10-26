@@ -1,12 +1,14 @@
 from flask import Blueprint, jsonify, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from app import db
-from app.models import User, Candidate, Vote, Region
+from app.models import User, Candidate, Vote, Region, Ballot, Attendance
 from datetime import datetime
 import hashlib
 from functools import wraps
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
+from flask import current_app
+from app.vote_service import cast_anonymous_vote
 main = Blueprint('main', __name__)
 
 # ----- tiny helpers -----
@@ -86,6 +88,13 @@ def delegate_dashboard():
     Managers see all candidates.
     """
     delegate_region = getattr(getattr(current_user, "enrolment", None), "region", None)
+    # Determine user's state from enrolment if available, otherwise from licence state
+    enrol = getattr(current_user, "enrolment", None)
+    user_state = None
+    if enrol and getattr(enrol, "state", None):
+        user_state = (enrol.state or "").upper()
+    elif getattr(current_user, "driver_lic_state", None):
+        user_state = (current_user.driver_lic_state or "").upper()
 
     if getattr(current_user, "is_manager", False) or not delegate_region:
         candidates = Candidate.query.order_by(Candidate.name.asc()).all()
@@ -97,7 +106,33 @@ def delegate_dashboard():
             .all()
         )
 
-    regions = Region.query.order_by(Region.name.asc()).all()
+    # Build region selection for delegates:
+    # - Prefer district/upper items for the user's state if available
+    # - Fallback to the list of states
+    if user_state in ["ACT","NSW","NT","QLD","SA","TAS","VIC","WA"]:
+        q = Region.query
+        q = q.filter(
+            db.and_(
+                Region.state_code == user_state,
+                Region.level.in_(["district", "upper"])  # show electoral areas
+            )
+        )
+        regions = q.order_by(Region.name.asc()).all()
+        if not regions:
+            # fallback to showing state list if no detailed regions are seeded
+            regions = (
+                Region.query
+                .filter(Region.level == "state")
+                .order_by(Region.name.asc())
+                .all()
+            )
+    else:
+        regions = (
+            Region.query
+            .filter(Region.level == "state")
+            .order_by(Region.name.asc())
+            .all()
+        )
     return render_template(
         "delegates_dashboard.html",
         candidates=candidates,
@@ -135,7 +170,7 @@ def vote():
         flash("Invalid candidate selected.")
         return redirect(url_for("main.dashboard"))
 
-    candidate = Candidate.query.get(candidate_id)
+    candidate = db.session.get(Candidate, candidate_id)
     if not candidate:
         flash("Invalid candidate selected.")
         return redirect(url_for("main.dashboard"))
@@ -145,31 +180,11 @@ def vote():
         flash("You can only vote for candidates in your region.")
         return redirect(url_for("main.dashboard"))
 
-    # create vote
-    v = Vote(
-        user_id=current_user.id,
-        candidate_id=candidate.id,
-        position=candidate.position
-    )
-    
-    # Create vote hash for integrity
-    vote_data = f"{current_user.id}{candidate.id}{datetime.utcnow().timestamp()}"
-    v.vote_hash = hashlib.sha256(vote_data.encode()).hexdigest()
-
-    # Persist vote and user state in a transaction. If another concurrent
-    # request already recorded a vote for this user, the unique constraint
-    # on Vote.user_id will raise IntegrityError which we catch and handle.
+    # Use a single atomic transaction via service: insert Ballot then Attendance
     try:
-        # TODO: re-implement an ATOMIC transaction here if it was removed
-        # TODO: generally apply structure and patterns in a new security requirement
-
-        # Mark user as voted
-        current_user.has_voted = True
-        db.session.add(v)
-
-        # Mark user as voted before commit to keep app and DB in sync
-        db.session.commit()
+        cast_anonymous_vote(db, current_user, candidate)
     except IntegrityError:
+        # Unique(election_id, voter_key) enforces one vote per person per election
         db.session.rollback()
         flash('You have already voted.')
         return redirect(url_for('main.dashboard'))
@@ -184,16 +199,17 @@ def results():
         flash('Access denied')
         return redirect(url_for('main.dashboard'))
     
-    # Basic vote counting
-    votes = Vote.query.all()
+    # Basic vote counting from anonymised ballots
+    ballots = Ballot.query.all()
     results = {}
-    total_votes = len(votes)
-    
-    for vote in votes:
-        candidate = Candidate.query.get(vote.candidate_id)
-        if candidate.name not in results:
-            results[candidate.name] = 0
-        results[candidate.name] += 1
+    total_votes = len(ballots)
+
+    for ballot in ballots:
+        candidate = db.session.get(Candidate, ballot.candidate_id)
+        if not candidate:
+            # Skip if candidate no longer exists
+            continue
+        results[candidate.name] = results.get(candidate.name, 0) + 1
     
     from datetime import datetime
 

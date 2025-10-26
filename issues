@@ -64,3 +64,5 @@ Any recipient can verify authenticity using the Commission’s public key.
 All user sessions (voter and staff) shall use signed, short-lived tokens (e.g., JWT). 
 Sessions must automatically expire after 15 minutes of inactivity to prevent misuse. 
 
+13. Votes should be stored in an anonymised way
+Votes and attendance must be stored separately to preserve voter anonymity.

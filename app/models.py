@@ -1,6 +1,7 @@
 # app/models.py
 from datetime import datetime
 from . import db, login_manager
+import uuid
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from .security.password_validator import validate_password_strength, PasswordValidationError
@@ -21,6 +22,11 @@ class Region(db.Model):
     __tablename__ = "regions"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+    # Optional metadata to model AU structure: state -> (upper region) -> district
+    state_code = db.Column(db.String(8), nullable=True, index=True)  # e.g., VIC/NSW/...
+    level = db.Column(db.String(16), nullable=True, index=True)      # 'state' | 'upper' | 'district'
+    parent_id = db.Column(db.Integer, db.ForeignKey("regions.id"), nullable=True)
+    parent = db.relationship("Region", remote_side=[id])
 
     def __repr__(self):
         return f"<Region {self.name}>"
@@ -224,6 +230,41 @@ class Vote(db.Model):
     vote_hash = db.Column(db.String(64))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
+# ---- Anonymised voting storage ----
+class Ballot(db.Model):
+    """An anonymous ballot record with no direct user identifiers.
+
+    Stores the minimal information needed to compute results. Any linkage
+    back to a voter is performed via the separate Attendance table using a
+    server-side pepper (not stored here).
+    """
+    __tablename__ = "ballots"
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    election_id = db.Column(db.String(64), nullable=False, index=True)
+    candidate_id = db.Column(db.Integer, nullable=False, index=True)
+    position = db.Column(db.String(120), nullable=False)
+    integrity_hash = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Attendance(db.Model):
+    """Attendance records enforce one-vote-per-person per election.
+
+    The voter_key is a deterministic HMAC-SHA256 of a stable identifier
+    (e.g., driver_lic_no or its hash) using a secret pepper. This prevents
+    linking attendance to a specific person without the pepper.
+    """
+    __tablename__ = "attendance"
+    __table_args__ = (
+        db.UniqueConstraint("election_id", "voter_key", name="uq_attendance_election_voter"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    election_id = db.Column(db.String(64), nullable=False, index=True)
+    voter_key = db.Column(db.String(64), nullable=False, index=True)
+    ballot_link = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))

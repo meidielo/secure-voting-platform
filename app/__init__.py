@@ -50,6 +50,11 @@ def create_app(test_config=None):
         SESSION_COOKIE_NAME='otp_session',  # Rename session cookie for clarity
         SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
         SESSION_COOKIE_SAMESITE='Lax',
+
+        # Voting configuration
+        ELECTION_ID=os.environ.get('ELECTION_ID', 'ELECTION2025'),
+        # 32-byte base64 or hex pepper; fallback to SECRET_KEY for dev
+        VOTE_ATTENDANCE_PEPPER=os.environ.get('VOTE_ATTENDANCE_PEPPER') or os.environ.get('SECRET_KEY', 'dev-secret'),
     )
 
     # Trust proxy headers when running behind nginx
@@ -154,7 +159,7 @@ def create_app(test_config=None):
 
         user_id = payload.get('sub')
         try:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
         except Exception:
             return None
 
