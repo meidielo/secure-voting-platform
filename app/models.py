@@ -4,6 +4,7 @@ from . import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from .security.password_validator import validate_password_strength, PasswordValidationError
+from .security.encryption import EncryptedType
 
 # ---- Roles ----
 class Role(db.Model):
@@ -156,15 +157,15 @@ class ElectoralRoll(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     roll_number = db.Column(db.String(50), unique=True, nullable=False)
-    driver_license_number = db.Column(db.String(30), unique=True, nullable=False)
+    driver_license_number = db.Column(EncryptedType(length=255), unique=True, nullable=False)
 
-    full_name = db.Column(db.String(150), nullable=False)
+    full_name = db.Column(EncryptedType(length=255), nullable=False)
     date_of_birth = db.Column(db.Date, nullable=False)
-    address_line1 = db.Column(db.String(150), nullable=False)
-    address_line2 = db.Column(db.String(150))
-    suburb = db.Column(db.String(100), nullable=False)
-    state = db.Column(db.String(10), nullable=False)
-    postcode = db.Column(db.String(10), nullable=False)
+    address_line1 = db.Column(EncryptedType(length=255), nullable=False)
+    address_line2 = db.Column(EncryptedType(length=255))
+    suburb = db.Column(EncryptedType(length=255), nullable=False)
+    state = db.Column(EncryptedType(length=50), nullable=False)
+    postcode = db.Column(EncryptedType(length=50), nullable=False)
 
     region_id = db.Column(db.Integer, db.ForeignKey("regions.id"), nullable=False)
     region = db.relationship("Region")

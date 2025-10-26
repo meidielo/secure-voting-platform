@@ -9,7 +9,7 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-
+from .security.encryption import ChaChaEncryptionService
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -28,7 +28,15 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True, template_folder='templates')
-
+    
+    # Generate a new key if not exists (development only)
+    if not os.environ.get('VOTER_PII_KEY_BASE64'):
+        # Generate a random 32-byte key and encode it in base64
+        key = base64.b64encode(os.urandom(32))
+        os.environ['VOTER_PII_KEY_BASE64'] = key.decode()
+        app.logger.warning("Generated new encryption key: %s", key.decode())
+    
+    ChaChaEncryptionService.initialize(os.environ.get('VOTER_PII_KEY_BASE64'))
     # register blueprints and other stuff here
     # default config
     app.config.from_mapping(
@@ -55,17 +63,17 @@ def create_app(test_config=None):
         SESSION_COOKIE_SAMESITE='Lax',
     )
 
-    key_b64 = app.config.get("VOTER_PII_KEY_B64")
+    key_b64 = os.environ.get("VOTER_PII_KEY_BASE64")
     if not key_b64:
-        raise RuntimeError("Missing VOTER_PII_KEY_B64 in .env file.")
+        raise RuntimeError("Missing VOTER_PII_KEY_BASE64 in environment.")
 
     try:
         decoded_key = base64.b64decode(key_b64)
     except Exception:
-        raise RuntimeError("VOTER_PII_KEY_B64 is not valid Base64 encoding.")
+        raise RuntimeError("VOTER_PII_KEY_BASE64 is not valid Base64 encoding.")
 
     if len(decoded_key) != 32:
-        raise RuntimeError("VOTER_PII_KEY_B64 must decode to exactly 32 bytes for AES-256.")
+        raise RuntimeError("VOTER_PII_KEY_BASE64 must decode to exactly 32 bytes for AES-256.")
 
     # Trust proxy headers when running behind nginx
     from werkzeug.middleware.proxy_fix import ProxyFix
