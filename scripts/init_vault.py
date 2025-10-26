@@ -93,6 +93,16 @@ class VaultInitializer:
         """Create sample configuration secrets."""
         print("Creating sample secrets...")
         
+        # JWT secret for Flask session management (used by jwt_helpers.py)
+        self.client.secrets.kv.v2.create_or_update_secret(
+            path='app/jwt',
+            secret={
+                'secret': 'vault-managed-jwt-secret-key-for-tokens'
+            },
+            mount_point='kv'
+        )
+        print("  - JWT secret created")
+        
         # Voting system configuration
         self.client.secrets.kv.v2.create_or_update_secret(
             path='voting/config',
@@ -104,6 +114,7 @@ class VaultInitializer:
             },
             mount_point='kv'
         )
+        print("  - Voting config created")
         
         # Security configuration
         self.client.secrets.kv.v2.create_or_update_secret(
@@ -116,6 +127,7 @@ class VaultInitializer:
             },
             mount_point='kv'
         )
+        print("  - Security config created")
         
         print("✓ Sample secrets created")
     
@@ -133,12 +145,21 @@ path "transit/verify/results-signing" {
   capabilities = ["update"]
 }
 
+# Allow reading JWT secret from KV
+path "kv/data/app/jwt" {
+  capabilities = ["read"]
+}
+
 # Allow reading configuration from KV
 path "kv/data/voting/*" {
   capabilities = ["read"]
 }
 
 # Allow listing KV secrets
+path "kv/metadata/app/jwt" {
+  capabilities = ["read"]
+}
+
 path "kv/metadata/voting/*" {
   capabilities = ["list", "read"]
 }

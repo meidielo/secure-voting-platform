@@ -28,11 +28,20 @@ def create_app(test_config=None):
 
     # register blueprints and other stuff here
     # default config
+    # Check if running in testing mode (from DEPLOYMENT_ENV or FLASK_ENV)
+    deployment_env = os.environ.get('DEPLOYMENT_ENV', '').lower()
+    flask_env = os.environ.get('FLASK_ENV', '').lower()
+    is_testing = deployment_env == 'testing' or flask_env == 'testing'
+    
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret'),
         SQLALCHEMY_DATABASE_URI= os.environ.get('DATABASE_URL') 
             or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        
+        # Enable TESTING mode when running in test environment
+        # This disables security checks like login nonce requirement for easier testing
+        TESTING=is_testing,
 
         # Mail settings
         MAIL_SERVER=os.environ.get('MAIL_SERVER', 'smtp.gmail.com'),

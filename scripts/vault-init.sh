@@ -30,6 +30,11 @@ vault secrets enable -path=kv kv-v2
 
 # Create some sample secrets for the voting system
 echo "Creating sample secrets..."
+
+# JWT secret for Flask session management
+vault kv put kv/app/jwt \
+    secret="vault-managed-jwt-secret-key-for-tokens"
+
 vault kv put kv/voting/config \
     admin_email="admin@voting-system.local" \
     system_name="Secure Voting System" \
@@ -52,12 +57,21 @@ path "transit/verify/results-signing" {
   capabilities = ["update"]
 }
 
+# Allow reading JWT secret from KV
+path "kv/data/app/jwt" {
+  capabilities = ["read"]
+}
+
 # Allow reading configuration from KV
 path "kv/data/voting/*" {
   capabilities = ["read"]
 }
 
 # Allow listing KV secrets
+path "kv/metadata/app/jwt" {
+  capabilities = ["read"]
+}
+
 path "kv/metadata/voting/*" {
   capabilities = ["list", "read"]
 }
