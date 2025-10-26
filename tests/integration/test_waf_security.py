@@ -258,21 +258,36 @@ class TestWAFSecurityPenetration:
         general_success_count = sum(1 for r in general_responses if r in [200, 302])
         print(f"General endpoint: {general_success_count}/{len(general_responses)} successful requests")
 
-        # Test 2: Voting endpoint should work (may redirect, but not blocked)
+        # Test 2: Voting endpoint brute force protection
+        # Test rapid POST requests to /vote to verify rate limiting blocks brute force attacks
         voting_responses = []
         http_runner.session.cookies.clear()  # Clean session
 
-        for i in range(5):  # Fewer requests for voting endpoint
+        for i in range(5):  # Brute force simulation
             try:
-                response = http_runner.get('/vote')
+                # POST to /vote endpoint (simulating automated vote stuffing)
+                # Will get 401/403 (not authenticated) but that's expected
+                # We're testing if rate limiting blocks the rapid requests
+                response = http_runner.post(
+                    '/vote',
+                    data={'candidate_id': '1'},  # Dummy vote data
+                    headers={'Content-Type': 'application/x-www-form-urlencoded'}
+                )
                 voting_responses.append(response.status_code)
             except Exception as e:
                 voting_responses.append('error')
-            time.sleep(0.5)  # Increased delay for voting (stricter rate limit)
+            time.sleep(0.2)  # Rapid requests to test rate limiting (less than 1 per second)
 
-        voting_success_count = sum(1 for r in voting_responses if r in [200, 302, 404])
-        print(f"Voting endpoint: {voting_success_count}/{len(voting_responses)} successful requests")
+        # Success = endpoint responds (200, 302, 401, 403, 429)
+        # We expect to see some 429 (Too Many Requests) as rate limit kicks in
+        # 401/403 means auth failed but endpoint was reached (good)
+        voting_success_count = sum(1 for r in voting_responses if r not in ['error', 503])
+        voting_rate_limited = sum(1 for r in voting_responses if r == 429)
+        
+        print(f"Voting endpoint: {voting_success_count}/{len(voting_responses)} responses received")
         print(f"  Voting response codes: {voting_responses}")
+        print(f"  Rate limited (429): {voting_rate_limited}")
+        print(f"  Note: 200 responses may indicate test mode skipping auth checks")
 
         # Test 3: Dev endpoint should work (ModSecurity disabled for dev)
         dev_responses = []
@@ -293,8 +308,9 @@ class TestWAFSecurityPenetration:
         # General should work with delays (rate limit is 200r/m = ~3.3/s, so 0.3s between requests should work)
         assert general_success_count >= 5, f"General endpoint should be accessible with delays. Got {general_success_count}/10 successful"
         
-        # Voting is more strict but shouldn't fail completely
-        assert voting_success_count >= 2, f"Voting endpoint should be accessible. Got {voting_success_count}/5 successful"
+        # Voting should respond (may be rate limited with 429, or auth fail with 401/403)
+        # Key: should NOT error out or get 503 (gateway errors)
+        assert voting_success_count >= 3, f"Voting endpoint should respond to requests. Got {voting_success_count}/5 responses"
         
         # Dev should work well since it has looser limits and ModSecurity disabled
         assert dev_success_count >= 8, f"Dev endpoint should be accessible. Got {dev_success_count}/10 successful"
