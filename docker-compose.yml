@@ -11,11 +11,11 @@ services:
       - "8000:8000" 
     expose:
       - "8000"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: mysql+pymysql://votinguser:votingpass@db:3306/votingdb
       GEO_FILTER_ENABLED: "True"
       GEOIP_DB_PATH: /data/GeoLite2-Country.mmdb
-      LOG_LEVEL: info
     volumes:
       - ./data:/data
       - ./instance:/instance

@@ -231,3 +231,35 @@ path "kv/data/app/jwt" {
 If Vault is not configured, the app falls back to local RSA keys under the Flask instance folder for result signing and to `SECRET_KEY` env var for JWT.
 
 This will delete all existing data and start with a fresh database.
+
+## PII Encryption and Keys
+
+Sensitive voter fields (e.g., full name, address, driver licence number) are encrypted at rest using ChaCha20‑Poly1305. Key points:
+
+- The encryption key is provided via the environment variable `VOTER_PII_KEY_BASE64` and must be a Base64-encoded 32-byte value.
+- The application’s encryption service returns standard Base64 with proper padding. Decryption strictly validates Base64 and treats clearly non-ciphertext (too short/invalid) as plaintext to preserve legacy rows.
+- Keep the key stable across restarts. Changing the key without re-encrypting data will make existing ciphertext unreadable.
+
+### Configure the key
+
+1. Add to `.env` (already present in this repo as an example):
+    - `VOTER_PII_KEY_BASE64=<your base64 32-byte key>`
+2. For Docker Compose, `.env` is loaded automatically by the `web` service.
+
+To generate a key locally (example):
+
+```python
+import os, base64
+print(base64.b64encode(os.urandom(32)).decode())
+```
+
+### Migration from legacy formats
+
+- If your database contains plaintext or values encrypted with an older scheme (e.g., Fernet), the app will continue to function because the decrypt path safely returns plaintext when a value isn’t recognized as ChaCha20‑Poly1305 ciphertext.
+- To permanently migrate legacy-encrypted data, use `scripts/migrate_encryption.py`. It now uses the same encryption service as the app, ensuring output format matches runtime decryption.
+   - Requires `OLD_FERNET_KEY` and `VOTER_PII_KEY_BASE64` in the environment.
+   - Run it with your app environment loaded so it can connect to the DB.
+
+Notes and guardrails:
+- Do not use URL-safe Base64 or strip padding for stored ciphertext; the application expects standard Base64 with padding.
+- Ensure columns storing encrypted data have sufficient length (>= 255 in this repo). The minimum to safely hold any ChaCha20‑Poly1305 output here is ~40 characters, but 255 is recommended.

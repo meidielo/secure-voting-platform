@@ -1,9 +1,13 @@
 # app/models.py
 from datetime import datetime
+import hashlib
+import re
 from . import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from .security.password_validator import validate_password_strength, PasswordValidationError
+from .security.encryption import EncryptedType
+from sqlalchemy import event
 
 # ---- Roles ----
 class Role(db.Model):
@@ -35,7 +39,10 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
     # Driver licence (used for identity binding)
-    driver_lic_no = db.Column(db.String(32), unique=True, nullable=False, index=True)
+    # Store the licence number encrypted at rest; use a deterministic SHA-256 hash
+    # for uniqueness and lookup to avoid leaking plaintext while supporting queries.
+    driver_lic_no = db.Column(EncryptedType(length=255), nullable=False)
+    driver_lic_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
     driver_lic_state = db.Column(db.String(8), nullable=True)  # e.g., VIC/NSW/QLD/...
 
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)
@@ -150,21 +157,52 @@ class User(UserMixin, db.Model):
         return f"<User {self.username} ({self.role.name if self.role else 'no-role'})>"
 
 
+# ---- Helpers for deterministic licence hashing ----
+_WS_RE = re.compile(r"\s+")
+
+def _normalize_lic(lic: str | None) -> str | None:
+    if not lic:
+        return None
+    # remove whitespace and uppercase for stable hashing
+    return _WS_RE.sub("", str(lic)).upper()
+
+
+def _hash_lic(lic: str | None) -> str | None:
+    norm = _normalize_lic(lic)
+    if not norm:
+        return None
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest()
+
+
+# Keep driver_lic_hash in sync on insert/update
+@event.listens_for(User, "before_insert")
+def _user_set_lic_hash_before_insert(mapper, connection, target: "User"):
+    target.driver_lic_hash = _hash_lic(getattr(target, "driver_lic_no", None)) or target.driver_lic_hash
+
+
+@event.listens_for(User, "before_update")
+def _user_set_lic_hash_before_update(mapper, connection, target: "User"):
+    # Recompute when the plaintext value changes
+    target.driver_lic_hash = _hash_lic(getattr(target, "driver_lic_no", None)) or target.driver_lic_hash
+
+
 # ---- Electoral Roll ----
 class ElectoralRoll(db.Model):
     __tablename__ = "electoral_roll"
     id = db.Column(db.Integer, primary_key=True)
 
     roll_number = db.Column(db.String(50), unique=True, nullable=False)
-    driver_license_number = db.Column(db.String(30), unique=True, nullable=False)
+    driver_license_number = db.Column(EncryptedType(length=255), unique=True, nullable=False)
+    # Deterministic hash for uniqueness and lookups that do not leak plaintext
+    driver_license_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
 
-    full_name = db.Column(db.String(150), nullable=False)
+    full_name = db.Column(EncryptedType(length=255), nullable=False)
     date_of_birth = db.Column(db.Date, nullable=False)
-    address_line1 = db.Column(db.String(150), nullable=False)
-    address_line2 = db.Column(db.String(150))
-    suburb = db.Column(db.String(100), nullable=False)
-    state = db.Column(db.String(10), nullable=False)
-    postcode = db.Column(db.String(10), nullable=False)
+    address_line1 = db.Column(EncryptedType(length=255), nullable=False)
+    address_line2 = db.Column(EncryptedType(length=255))
+    suburb = db.Column(EncryptedType(length=255), nullable=False)
+    state = db.Column(EncryptedType(length=50), nullable=False)
+    postcode = db.Column(EncryptedType(length=50), nullable=False)
 
     region_id = db.Column(db.Integer, db.ForeignKey("regions.id"), nullable=False)
     region = db.relationship("Region")
@@ -182,6 +220,17 @@ class ElectoralRoll(db.Model):
 
     def __repr__(self):
         return f"<ElectoralRoll {self.roll_number} {self.full_name}>"
+
+
+# Keep electoral roll licence hash in sync on insert/update
+@event.listens_for(ElectoralRoll, "before_insert")
+def _roll_set_lic_hash_before_insert(mapper, connection, target: "ElectoralRoll"):
+    target.driver_license_hash = _hash_lic(getattr(target, "driver_license_number", None)) or target.driver_license_hash
+
+
+@event.listens_for(ElectoralRoll, "before_update")
+def _roll_set_lic_hash_before_update(mapper, connection, target: "ElectoralRoll"):
+    target.driver_license_hash = _hash_lic(getattr(target, "driver_license_number", None)) or target.driver_license_hash
 
 
 # ---- Candidates ----
