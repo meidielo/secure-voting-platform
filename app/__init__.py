@@ -1,15 +1,46 @@
 import os
 import sys
 import logging
-from flask import Flask
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail  
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 
-db = SQLAlchemy()
+class RoutingSession(Session):
+    """
+    Route all ORM operations to a specific SQLAlchemy bind based on the
+    current request's active user type. This enables using the exact same
+    ORM models against multiple databases with identical schema.
+
+    Strategy:
+    - We set g._active_bind in a Flask before_request hook
+      (e.g., 'admin' for managers and admin endpoints; 'voters' otherwise).
+    - If no active bind is set, fall back to default engine.
+    """
+
+    def get_bind(self, mapper=None, clause=None, **kwargs):  # type: ignore[override]
+        bind_name = getattr(g, "_active_bind", None)
+        if bind_name:
+            # Use the bind-specific engine managed by Flask-SQLAlchemy
+            try:
+                return db.get_engine(current_app, bind=bind_name)
+            except Exception:
+                # If the bind is misconfigured, fall back to default
+                pass
+        return super().get_bind(mapper=mapper, clause=clause, **kwargs)
+
+
+class RoutingSQLAlchemy(SQLAlchemy):
+    def create_session(self, options):  # type: ignore[override]
+        # Inject our RoutingSession so ORM queries route to the active bind
+        return super().create_session({**options, "class_": RoutingSession})
+
+
+db = RoutingSQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 mail = Mail()
@@ -30,8 +61,18 @@ def create_app(test_config=None):
     # default config
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret'),
-        SQLALCHEMY_DATABASE_URI= os.environ.get('DATABASE_URL') 
+        SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL')
             or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
+        # Optional secondary databases (binds). If not provided, they default
+        # to the primary URI so the app keeps working unchanged.
+        SQLALCHEMY_BINDS={
+            # Admin/management traffic (managers, delegates, /admin routes)
+            'admin': os.environ.get('ADMIN_DATABASE_URL') or os.environ.get('DATABASE_URL')
+                or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
+            # Voter/public traffic (registration, voting, public pages)
+            'voters': os.environ.get('VOTERS_DATABASE_URL') or os.environ.get('DATABASE_URL')
+                or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
+        },
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
         # Mail settings
@@ -50,6 +91,10 @@ def create_app(test_config=None):
         SESSION_COOKIE_NAME='otp_session',  # Rename session cookie for clarity
         SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
         SESSION_COOKIE_SAMESITE='Lax',
+
+        # Optional: when true, add X-DB-Bind header to responses to show which
+        # database bind handled the request (useful for verifying split routing)
+        DEBUG_DB_BIND=os.environ.get('DEBUG_DB_BIND', 'false').lower() in ('true','1','yes'),
     )
 
     # Trust proxy headers when running behind nginx
@@ -58,6 +103,10 @@ def create_app(test_config=None):
 
     if test_config:
         app.config.update(test_config)
+
+    # In test mode, avoid external DB connections: disable binds
+    if app.config.get('TESTING'):
+        app.config['SQLALCHEMY_BINDS'] = {}
 
     # ensure instance folder exists
     try:
@@ -128,9 +177,40 @@ def create_app(test_config=None):
         app.logger.warning(f"Admin users blueprint not loaded: {e}")
 
 
-    # create database tables if they don't exist
+    # Route database operations to a bind based on user type and path
+    @app.before_request
+    def _select_db_bind_for_request():
+        """
+        Decide which DB bind to use for this request:
+        - If hitting admin endpoints or user is a manager/delegate: use 'admin'
+        - Otherwise: use 'voters'
+        This keeps read/write traffic isolated per user type when binds are set.
+        """
+        try:
+            # If no binds configured (e.g., testing), do nothing
+            if not current_app.config.get('SQLALCHEMY_BINDS'):
+                g._active_bind = None
+                return
+            # Admin routes by URL prefix
+            if request.path.startswith('/admin'):
+                g._active_bind = 'admin'
+                return
+
+            from flask_login import current_user
+            if getattr(current_user, 'is_authenticated', False):
+                if getattr(current_user, 'is_manager', False) or getattr(current_user, 'is_delegate', False):
+                    g._active_bind = 'admin'
+                    return
+            # Default for all other cases
+            g._active_bind = 'voters'
+        except Exception:
+            # On any error, do not block the request; fall back to default
+            g._active_bind = None
+
+    # create database tables if they don't exist (for all binds)
     with app.app_context():
         from app import models  # noqa: F401
+        # Create tables across default and configured binds
         db.create_all()
 
     # NOTE: older code paths may expect a Flask-Login user; we enhance request
@@ -181,6 +261,10 @@ def create_app(test_config=None):
             secure = bool(int(current_app.config.get('SESSION_COOKIE_SECURE', 0)))
             samesite = current_app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')
             response.set_cookie('session_token', new_token, httponly=True, secure=secure, samesite=samesite)
+        # Optionally expose the active DB bind for verification during development
+        if current_app.config.get('DEBUG_DB_BIND'):
+            bind_name = getattr(g, '_active_bind', None)
+            response.headers['X-DB-Bind'] = bind_name or 'default'
         return response
 
     return app

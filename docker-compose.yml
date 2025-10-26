@@ -13,6 +13,9 @@ services:
       - "8000"
     environment:
       DATABASE_URL: mysql+pymysql://votinguser:votingpass@db:3306/votingdb
+      ADMIN_DATABASE_URL: mysql+pymysql://voting_admin:adminpass@db:3306/votingdb_admin
+      VOTERS_DATABASE_URL: mysql+pymysql://voting_voter:voterpass@db:3306/votingdb_voters
+      DEBUG_DB_BIND: "true"
       GEO_FILTER_ENABLED: "True"
       GEOIP_DB_PATH: /data/GeoLite2-Country.mmdb
       LOG_LEVEL: info

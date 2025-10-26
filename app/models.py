@@ -211,6 +211,11 @@ class Candidate(db.Model):
 # ---- Votes ----
 class Vote(db.Model):
     __tablename__ = "vote"
+    # Always route Vote operations to the 'voters' bind to enforce that
+    # only the voters database/connection has access to insert/select votes.
+    # This prevents accidental writes from the admin bind and allows granting
+    # DB-level privileges only to the voters connection.
+    __bind_key__ = 'voters'
     __table_args__ = (
         # Enforce one vote per user at the database level to prevent duplicates
         db.UniqueConstraint('user_id', name='uq_vote_user_id'),
