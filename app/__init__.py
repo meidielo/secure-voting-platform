@@ -1,10 +1,12 @@
 import os
 import sys
 import logging
+import base64
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail  
+from flask_migrate import Migrate
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
@@ -12,6 +14,7 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 mail = Mail()
+migrate = Migrate()
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -50,6 +53,18 @@ def create_app(test_config=None):
         SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
         SESSION_COOKIE_SAMESITE='Lax',
     )
+
+    key_b64 = app.config.get("VOTER_PII_KEY_B64")
+    if not key_b64:
+        raise RuntimeError("Missing VOTER_PII_KEY_B64 in .env file.")
+
+    try:
+        decoded_key = base64.b64decode(key_b64)
+    except Exception:
+        raise RuntimeError("VOTER_PII_KEY_B64 is not valid Base64 encoding.")
+
+    if len(decoded_key) != 32:
+        raise RuntimeError("VOTER_PII_KEY_B64 must decode to exactly 32 bytes for AES-256.")
 
     # Trust proxy headers when running behind nginx
     from werkzeug.middleware.proxy_fix import ProxyFix

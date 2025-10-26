@@ -85,7 +85,7 @@ class ElectoralRoll(db.Model):
     region_id = db.Column(db.Integer, db.ForeignKey("regions.id"), nullable=False)
     region = db.relationship("Region")
 
-    status = db.Column(db.Enum("active","suspended","removed", name="roll_status"),
+    status = db.Column(db.Enum("active","suspended","removed","pending", name="roll_status"),
                        nullable=False, default="active")
     verified = db.Column(db.Boolean, nullable=False, default=False)
     verified_at = db.Column(db.DateTime)
