@@ -65,6 +65,6 @@ def _build_db_binds(instance_path):
     voter_pass = os.environ.get('VOTING_VOTER_PASS', 'voterpass')
     
     return {
-        'admin': _build_bind_url(base_url, admin_user, admin_pass, 'votingdb_admin'),
-        'voters': _build_bind_url(base_url, voter_user, voter_pass, 'votingdb_voters'),
+        'admin': _build_bind_url(base_url, admin_user, admin_pass, 'votingdb'),
+        'voters': _build_bind_url(base_url, voter_user, voter_pass, 'votingdb'),
     }
