@@ -76,6 +76,7 @@ services:
       MYSQL_DATABASE: votingdb
       MYSQL_USER: votinguser
       MYSQL_PASSWORD: votingpass
+      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
     volumes:
       - db_data:/var/lib/mysql
       # keep slow query logs on a host path

@@ -61,8 +61,15 @@ def create_db_users():
                 CREATE USER IF NOT EXISTS 'voting_voter'@'%' IDENTIFIED WITH caching_sha2_password BY 'voterpass'
             """)
             # Grant permissions
+            # Admin user: full access except vote table modifications
             cursor.execute("GRANT ALL PRIVILEGES ON votingdb.* TO 'voting_admin'@'%'")
+            cursor.execute("REVOKE INSERT, UPDATE, DELETE ON votingdb.vote FROM 'voting_admin'@'%'")
+
+            # Voter user: read access to all, insert on vote, update has_voted on user
             cursor.execute("GRANT SELECT ON votingdb.* TO 'voting_voter'@'%'")
+            cursor.execute("GRANT INSERT ON votingdb.vote TO 'voting_voter'@'%'")
+            cursor.execute("GRANT UPDATE (has_voted) ON votingdb.user TO 'voting_voter'@'%'")
+            
             cursor.execute("FLUSH PRIVILEGES")
         conn.commit()
         print("✅ Database users created successfully")
