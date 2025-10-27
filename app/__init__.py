@@ -201,7 +201,7 @@ def create_app(test_config=None):
 
         user_id = payload.get('sub')
         try:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
         except Exception:
             return None
 
