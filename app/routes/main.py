@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, session
+from app.helpers import flash_once
 from flask_login import login_required, current_user
 from app import db
 from app.models import User, Candidate, Vote, Region
@@ -50,19 +51,8 @@ def dashboard():
     candidates = Candidate.query.order_by(Candidate.name.asc()).all()
     eligible = user_is_eligible_to_vote(current_user)
 
-    # Friendly hints for common non-eligible states (optional).
-    # Keep flashes concise and specific; the template already shows a comprehensive
-    # eligibility block, so avoid duplicating the generic "not eligible" message.
-    if not getattr(current_user, "is_approved", False):
-        flash("Your account is pending admin approval.")
-    elif getattr(current_user, "enrolment", None) is None:
-        flash("No enrolment found. Please contact support.")
-    else:
-        # Only surface very specific roll problems as flashes (status or verification)
-        if current_user.enrolment.status != "active":
-            flash(f"Electoral roll status: {current_user.enrolment.status} (requires active).")
-        if not current_user.enrolment.verified:
-            flash("Your electoral roll entry is not yet verified.")
+    # Eligibility details are shown directly in the template (avoid duplicating
+    # these as flashed messages to prevent the same text showing twice).
 
     return render_template(
         'dashboard.html',
@@ -110,33 +100,33 @@ def vote():
     """
     # Explicit approval gate (clear message)
     if not getattr(current_user, "is_approved", False):
-        flash("Your account is pending admin approval.")
+        flash_once("Your account is pending admin approval.")
         return redirect(url_for("main.dashboard"))
 
     if current_user.has_voted:
-        flash("You have already voted.")
+        flash_once('You have already voted.')
         return redirect(url_for("main.dashboard"))
 
     # only verified voters on the roll can vote
     if not user_is_eligible_to_vote(current_user):
-        flash("You are not eligible to vote.")
+        flash_once('You are not eligible to vote.')
         return redirect(url_for("main.dashboard")) # TODO: if the user can't vote they might not use the main dashboard for their login?
 
     candidate_id_raw = request.form.get("candidate_id")
     try:
         candidate_id = int(candidate_id_raw)
     except (TypeError, ValueError):
-        flash("Invalid candidate selected.")
+        flash_once('Invalid candidate selected.')
         return redirect(url_for("main.dashboard"))
 
     candidate = Candidate.query.get(candidate_id)
     if not candidate:
-        flash("Invalid candidate selected.")
+        flash_once('Invalid candidate selected.')
         return redirect(url_for("main.dashboard"))
 
     # must vote in own region
     if current_user.enrolment.region_id != candidate.region_id:
-        flash("You can only vote for candidates in your region.")
+        flash_once('You can only vote for candidates in your region.')
         return redirect(url_for("main.dashboard"))
 
     # create vote
@@ -165,17 +155,17 @@ def vote():
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        flash('You have already voted.')
+        flash_once('You have already voted.')
         return redirect(url_for('main.dashboard'))
     
-    flash('Vote cast successfully!')
+    #flash_once('Vote cast successfully!')
     return redirect(url_for('main.dashboard'))
 
 @main.route("/results")
 @roles_required("manager")  # managers only
 def results():
     if not current_user.is_manager:
-        flash('Access denied')
+        flash_once('Access denied')
         return redirect(url_for('main.dashboard'))
     
     # Basic vote counting
@@ -220,5 +210,5 @@ def results():
 
 @main.errorhandler(403)
 def forbidden(_):
-    flash("Access denied")
+    flash_once("Access denied")
     return redirect(url_for("main.dashboard"))

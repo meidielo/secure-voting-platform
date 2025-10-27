@@ -95,6 +95,13 @@ def create_app(test_config=None):
     from .middleware import check_geo_ip
     app.before_request(check_geo_ip)
 
+    # Initialize audit/HMAC-backed logging (writes to instance/audit.log by default)
+    try:
+        from app.logging_service import init_audit_logging
+        init_audit_logging(app)
+    except Exception as e:
+        app.logger.warning(f"Failed to initialize audit logging: {e}")
+
     db.init_app(app)
     login_manager.init_app(app)
     mail.init_app(app)   # Initialize Mail
