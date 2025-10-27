@@ -12,6 +12,12 @@ services:
     expose:
       - "8000"
     environment:
+      VOTING_ADMIN_USER: voting_admin
+      VOTING_ADMIN_PASS: adminpass
+      VOTING_VOTER_USER: voting_voter
+      VOTING_VOTER_PASS: voterpass
+      DATABASE_URL: mysql+pymysql://votinguser:votingpass@db:3306/votingdb
+      DEBUG_DB_BIND: "true"
       GEO_FILTER_ENABLED: "True"
       GEOIP_DB_PATH: /data/GeoLite2-Country.mmdb
       LOG_LEVEL: info
