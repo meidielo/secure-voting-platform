@@ -3,10 +3,11 @@ Flask-SQLAlchemy==3.0.5
 Flask-Login==0.6.3
 Werkzeug==2.3.7
 Flask-Mail==0.10.0
+Flask-Migrate==4.0.5
 PyMySQL==1.1.0
 gunicorn
 cryptography
-geoip2>=4.6.0
+geoip2>=4.8.0
 psutil
 python-dotenv
 PyJWT

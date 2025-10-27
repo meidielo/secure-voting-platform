@@ -6,12 +6,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Set Python path
+ENV PYTHONPATH=/
+
 # Copy app code
 COPY . .
 
-# Set Python path so app module can be found
-ENV PYTHONPATH=/
-
 EXPOSE 8000
 
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "--pythonpath", "/", "wsgi:app", "--workers", "2", "--threads", "4", "--timeout", "60"]
+ENTRYPOINT ["sh", "-c", "export PYTHONPATH=/ && python init_db.py && exec gunicorn --pythonpath / -b 0.0.0.0:8000 wsgi:app --workers 2 --threads 4 --timeout 60"]

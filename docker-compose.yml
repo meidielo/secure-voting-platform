@@ -11,8 +11,9 @@ services:
       - "8000:8000" 
     expose:
       - "8000"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: mysql+pymysql://votinguser:votingpass@db:3306/votingdb
       GEO_FILTER_ENABLED: "True"
       GEOIP_DB_PATH: /data/GeoLite2-Country.mmdb
       LOG_LEVEL: info
@@ -74,9 +75,9 @@ services:
       # - ./mysql-logs:/var/log/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -prootpass || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 30
     networks:
       - db_net
     ports:
