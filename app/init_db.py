@@ -1,6 +1,6 @@
 # init_db.py
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from app import db
 from app.models import (
     User,
@@ -10,6 +10,7 @@ from app.models import (
     ElectoralRoll,
 )
 from werkzeug.security import generate_password_hash
+from app.utils.db_utils import wait_for_db
 
 # -------------------------------------------------------------------
 # Utilities
@@ -83,6 +84,9 @@ def init_database(app):
     All seeded users are set to `approved` to simplify local testing.
     """
     with app.app_context():
+        # Wait for database to be ready
+        wait_for_db()
+
         # 1) create tables
         try:
             db.create_all()
@@ -127,7 +131,7 @@ def init_database(app):
                     driver_lic_no=make_lic("ADMIN01"),
                     driver_lic_state="VIC",
                     has_voted=False,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     account_status="approved",
                 )
                 admin.role = manager_role
@@ -152,7 +156,7 @@ def init_database(app):
                     driver_lic_no=make_lic("DELEG01"),
                     driver_lic_state="NSW",
                     has_voted=False,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     account_status="approved",
                 )
                 delegate1.role = delegate_role
@@ -175,7 +179,7 @@ def init_database(app):
                     driver_lic_no=make_lic("VOTER01"),
                     driver_lic_state="NSW",
                     has_voted=False,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     account_status="approved",
                 )
                 voter1.role = voter_role
@@ -198,7 +202,7 @@ def init_database(app):
                     driver_lic_no=make_lic("LIX0001"),
                     driver_lic_state="VIC",
                     has_voted=False,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     account_status="approved",
                 )
                 lix.role = voter_role
@@ -237,7 +241,7 @@ def init_database(app):
                             account_status="approved",
                             password_hash=generate_password_hash(
                                 voter_data['password'],
-                                method='pbkdf2:sha256:1' if is_testing_env else None
+                                method='pbkdf2:sha256:1' if is_testing_env else 'pbkdf2:sha256'
                             ),
                             password_changed_at=ts,
                             failed_login_attempts=0,
@@ -256,13 +260,13 @@ def init_database(app):
                                 driver_lic_state=voter_data['state'],
                                 role=voter_role,
                                 has_voted=False,
-                                created_at=datetime.utcnow(),
+                                created_at=datetime.now(timezone.utc).replace(tzinfo=None),
                                 account_status="approved",
                             )
                             # For test voters, bypass strength validation to honor test expectations
                             test_user.password_hash = generate_password_hash(
                                 voter_data['password'],
-                                method='pbkdf2:sha256:1' if is_testing_env else None
+                                method='pbkdf2:sha256:1' if is_testing_env else 'pbkdf2:sha256'
                             )
                             test_user.password_changed_at = datetime.utcnow()
                             test_user.failed_login_attempts = 0
@@ -300,7 +304,7 @@ def init_database(app):
                     region_id=sydney.id,
                     status="active",
                     verified=True,
-                    verified_at=datetime.utcnow(),
+                    verified_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     user_id=voter1.id,
                 )
                 db.session.add(er)
@@ -360,7 +364,7 @@ def init_database(app):
                                 region_id=random_region.id,
                                 status="active",
                                 verified=True,
-                                verified_at=datetime.utcnow(),
+                                verified_at=datetime.now(timezone.utc).replace(tzinfo=None),
                                 user_id=test_user.id,
                             )
                             db.session.add(er)

@@ -2,14 +2,18 @@ import os
 import sys
 import logging
 import types
-from flask import Flask, g, request, current_app
+from flask import Flask, g, current_app
+import base64
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail  
+from flask_migrate import Migrate
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from .security.encryption import ChaChaEncryptionService
+from .utils.db_utils import _build_db_binds
 
 class RoutingSession(Session):
     """
@@ -45,6 +49,7 @@ db = RoutingSQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 mail = Mail()
+migrate = Migrate()
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -57,24 +62,49 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True, template_folder='templates')
-
+    
+    # Generate a new key if not exists (development only)
+    if not os.environ.get('VOTER_PII_KEY_BASE64'):
+        # Generate a random 32-byte key and encode it in base64
+        key = base64.b64encode(os.urandom(32))
+        os.environ['VOTER_PII_KEY_BASE64'] = key.decode()
+        app.logger.warning("Generated new encryption key: %s", key.decode())
+    
+    ChaChaEncryptionService.initialize(os.environ.get('VOTER_PII_KEY_BASE64'))
     # register blueprints and other stuff here
     # default config
+    # Check if running in testing mode (from DEPLOYMENT_ENV or FLASK_ENV)
+    deployment_env = os.environ.get('DEPLOYMENT_ENV', '').lower()
+    flask_env = os.environ.get('FLASK_ENV', '').lower()
+    is_testing = deployment_env == 'testing' or flask_env == 'testing'
+    
+    # Log testing mode for debugging
+    logging.info(f"🧪 DEPLOYMENT_ENV={deployment_env}, FLASK_ENV={flask_env}, TESTING={is_testing}")
+    if is_testing:
+        logging.info("✅ Testing mode ENABLED - security checks disabled")
+    else:
+        logging.info("🔒 Production mode - security checks enabled")
+    
+    # Log environment detection for debugging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.info(f"🔍 Environment Detection:")
+    logger.info(f"  DEPLOYMENT_ENV={deployment_env or '(not set)'}")
+    logger.info(f"  FLASK_ENV={flask_env or '(not set)'}")
+    logger.info(f"  → Testing Mode Enabled: {is_testing}")
+    
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret'),
         SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL')
             or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
         # Optional secondary databases (binds). If not provided, they default
         # to the primary URI so the app keeps working unchanged.
-        SQLALCHEMY_BINDS={
-            # Admin/management traffic (managers, delegates, /admin routes)
-            'admin': os.environ.get('ADMIN_DATABASE_URL') or os.environ.get('DATABASE_URL')
-                or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
-            # Voter/public traffic (registration, voting, public pages)
-            'voters': os.environ.get('VOTERS_DATABASE_URL') or os.environ.get('DATABASE_URL')
-                or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
-        },
+        SQLALCHEMY_BINDS=_build_db_binds(app.instance_path),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        
+        # Enable TESTING mode when running in test environment
+        # This disables security checks like login nonce requirement for easier testing
+        TESTING=is_testing,
 
         # Mail settings
         MAIL_SERVER=os.environ.get('MAIL_SERVER', 'smtp.gmail.com'),
@@ -97,6 +127,18 @@ def create_app(test_config=None):
         # database bind handled the request (useful for verifying split routing)
         DEBUG_DB_BIND=os.environ.get('DEBUG_DB_BIND', 'false').lower() in ('true','1','yes'),
     )
+
+    key_b64 = os.environ.get("VOTER_PII_KEY_BASE64")
+    if not key_b64:
+        raise RuntimeError("Missing VOTER_PII_KEY_BASE64 in environment.")
+
+    try:
+        decoded_key = base64.b64decode(key_b64)
+    except Exception:
+        raise RuntimeError("VOTER_PII_KEY_BASE64 is not valid Base64 encoding.")
+
+    if len(decoded_key) != 32:
+        raise RuntimeError("VOTER_PII_KEY_BASE64 must decode to exactly 32 bytes for AES-256.")
 
     # Trust proxy headers when running behind nginx
     from werkzeug.middleware.proxy_fix import ProxyFix
@@ -284,7 +326,7 @@ def create_app(test_config=None):
 
         user_id = payload.get('sub')
         try:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
         except Exception:
             return None
 

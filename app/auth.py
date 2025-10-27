@@ -17,6 +17,7 @@ except Exception:
 
 from app import db
 from app.models import User, Role, Region, ElectoralRoll
+from app.security.password_validator import validate_password_strength, PasswordValidationError
 import time
 from app.security.jwt_helpers import issue_token
 
@@ -463,15 +464,22 @@ def register():
         if password != confirm:
             flash("Passwords do not match")
             return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
-        if not is_strong_password(password):
-            flash("Password too weak: must be 12+ chars with uppercase, lowercase, and special character")
+        
+        # Password validation has been centralized in validate_password_strength()
+        # (replacing is_strong_password()) to ensure consistent password policy enforcement.
+        is_valid, error_message = validate_password_strength(password)
+        if not is_valid:
+            flash(f"Password too weak: {error_message}")
             return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
         # Driver licence
         if not validate_driver_lic(lic_no, lic_state or None):
             flash("Invalid driver licence number")
             return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
-        if User.query.filter_by(driver_lic_no=lic_no).first():
+        # Uniqueness check via deterministic hash (since licence is stored encrypted)
+        from app.models import _hash_lic
+        lic_hash = _hash_lic(lic_no)
+        if lic_hash and User.query.filter_by(driver_lic_hash=lic_hash).first():
             flash("Driver licence already bound to another account")
             return render_template('register.html', prev_username=username, prev_email=email, prev_state=lic_state)
 
@@ -492,6 +500,11 @@ def register():
             has_voted=False,
             account_status="pending",  # waiting for admin approval
         )
+        # Ensure hash is set (event listeners will also do this, but set eagerly for safety)
+        try:
+            user.driver_lic_hash = lic_hash or _hash_lic(lic_no)
+        except Exception:
+            user.driver_lic_hash = _hash_lic(lic_no)
         user.set_password(password)
         db.session.add(user)
         db.session.flush()  # need user.id for roll
