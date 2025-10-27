@@ -68,7 +68,7 @@ def dashboard():
     )
 
 
-@main.route("/delegate")
+@main.route("/delegate/")
 @roles_required("delegate", "manager")  # roles_required already wraps login_required
 def delegate_dashboard():
     """
