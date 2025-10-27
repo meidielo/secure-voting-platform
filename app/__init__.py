@@ -1,18 +1,21 @@
 import os
 import sys
 import logging
+import base64
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail  
+from flask_migrate import Migrate
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-
+from .security.encryption import ChaChaEncryptionService
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 mail = Mail()
+migrate = Migrate()
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -25,14 +28,46 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True, template_folder='templates')
-
+    
+    # Generate a new key if not exists (development only)
+    if not os.environ.get('VOTER_PII_KEY_BASE64'):
+        # Generate a random 32-byte key and encode it in base64
+        key = base64.b64encode(os.urandom(32))
+        os.environ['VOTER_PII_KEY_BASE64'] = key.decode()
+        app.logger.warning("Generated new encryption key: %s", key.decode())
+    
+    ChaChaEncryptionService.initialize(os.environ.get('VOTER_PII_KEY_BASE64'))
     # register blueprints and other stuff here
     # default config
+    # Check if running in testing mode (from DEPLOYMENT_ENV or FLASK_ENV)
+    deployment_env = os.environ.get('DEPLOYMENT_ENV', '').lower()
+    flask_env = os.environ.get('FLASK_ENV', '').lower()
+    is_testing = deployment_env == 'testing' or flask_env == 'testing'
+    
+    # Log testing mode for debugging
+    logging.info(f"🧪 DEPLOYMENT_ENV={deployment_env}, FLASK_ENV={flask_env}, TESTING={is_testing}")
+    if is_testing:
+        logging.info("✅ Testing mode ENABLED - security checks disabled")
+    else:
+        logging.info("🔒 Production mode - security checks enabled")
+    
+    # Log environment detection for debugging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.info(f"🔍 Environment Detection:")
+    logger.info(f"  DEPLOYMENT_ENV={deployment_env or '(not set)'}")
+    logger.info(f"  FLASK_ENV={flask_env or '(not set)'}")
+    logger.info(f"  → Testing Mode Enabled: {is_testing}")
+    
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret'),
         SQLALCHEMY_DATABASE_URI= os.environ.get('DATABASE_URL') 
             or ('sqlite:///' + os.path.join(app.instance_path, 'app.db')),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        
+        # Enable TESTING mode when running in test environment
+        # This disables security checks like login nonce requirement for easier testing
+        TESTING=is_testing,
 
         # Mail settings
         MAIL_SERVER=os.environ.get('MAIL_SERVER', 'smtp.gmail.com'),
@@ -52,6 +87,18 @@ def create_app(test_config=None):
         SESSION_COOKIE_SAMESITE='Lax',
     )
 
+    key_b64 = os.environ.get("VOTER_PII_KEY_BASE64")
+    if not key_b64:
+        raise RuntimeError("Missing VOTER_PII_KEY_BASE64 in environment.")
+
+    try:
+        decoded_key = base64.b64decode(key_b64)
+    except Exception:
+        raise RuntimeError("VOTER_PII_KEY_BASE64 is not valid Base64 encoding.")
+
+    if len(decoded_key) != 32:
+        raise RuntimeError("VOTER_PII_KEY_BASE64 must decode to exactly 32 bytes for AES-256.")
+
     # Trust proxy headers when running behind nginx
     from werkzeug.middleware.proxy_fix import ProxyFix
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
@@ -65,7 +112,8 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # Configure logging
+    # Configure logging (avoid adding duplicate handlers if the app is
+    # created multiple times in the same process — e.g. during tests)
     log_file = os.path.join(app.instance_path, 'app.log')
     logging.basicConfig(
         filename=log_file,
@@ -108,16 +156,25 @@ def create_app(test_config=None):
 
     # import blueprints (auth and main routes already in repo)
     from app import auth
-    from app.routes import main, dev_routes, health, candidates, registration
+    from app.routes import main, dev_routes, health, candidates, registration, password, results
     from app.routes.otp import otp_bp   # Create OTP blueprint
-
+    from app.routes.metrics import metrics_bp
     app.register_blueprint(auth.auth)
     app.register_blueprint(main.main)
     app.register_blueprint(dev_routes.dev)
     app.register_blueprint(health.health)
     app.register_blueprint(candidates.candidates)
     app.register_blueprint(registration.registration)
+    app.register_blueprint(results.results)
     app.register_blueprint(otp_bp)      # Register OTP blueprint
+    app.register_blueprint(password.password_bp)  # Register password management blueprint
+
+    # expose Prometheus metrics at /metrics (metrics blueprint is optional)
+    try:
+        app.register_blueprint(metrics_bp, url_prefix="/metrics")
+    except Exception:
+        app.logger.debug('metrics blueprint not registered')
+
     try:
         from app.routes.admin_users import admin_bp
         app.register_blueprint(admin_bp, url_prefix="/admin")
@@ -151,7 +208,7 @@ def create_app(test_config=None):
 
         user_id = payload.get('sub')
         try:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
         except Exception:
             return None
 
