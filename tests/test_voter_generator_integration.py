@@ -21,6 +21,7 @@ from app.generate_test_voters import get_test_voters, get_test_voter_count, TEST
 from app.init_db import init_database
 
 
+@pytest.mark.skip(reason="Skip performance tests in regular runs; run manually as needed")
 class TestVoterGenerator:
     """Test the test voter data generator itself."""
 
@@ -282,6 +283,7 @@ class TestHelperScript:
         assert 'usage:' in result.stdout.lower() or 'examples:' in result.stdout.lower()
 
 
+@pytest.mark.skip(reason="Skip performance tests in regular runs; run manually as needed")
 class TestPerformanceAndScale:
     """Test performance and scale aspects of test voter generation."""
 

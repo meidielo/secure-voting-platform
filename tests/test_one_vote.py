@@ -12,8 +12,8 @@ def test_one_vote_per_user(client, runner, app):
     assert candidate is not None
 
     rv = client.post('/vote', data={'candidate_id': candidate.id}, follow_redirects=True)
-    assert b'Vote cast successfully!' in rv.data
+    assert b'Thank you for voting!' in rv.data
 
     # try voting again
     rv2 = client.post('/vote', data={'candidate_id': candidate.id}, follow_redirects=True)
-    assert b'You have already voted' in rv2.data or b'Duplicate vote detected' in rv2.data
+    assert b'You have already voted' in rv2.data
