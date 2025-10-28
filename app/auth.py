@@ -364,6 +364,7 @@ def login():
             flash_once("Your account is pending admin approval. You may not be eligible to vote yet.")
 
         resp = make_response(redirect(request.args.get('next') or url_for('main.dashboard')))
+        
         # cookie settings mirror app config but allow override via env
         secure = bool(int(current_app.config.get('SESSION_COOKIE_SECURE', 0)))
         samesite = current_app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')

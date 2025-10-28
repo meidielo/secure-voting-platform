@@ -149,7 +149,7 @@ class TestSmokeTests:
         # Logout
         response = client.get('/logout', follow_redirects=True)
         assert response.status_code == 200
-        assert b'Login' in response.data
+        assert b'Voter Sign In' in response.data
 
         # Try to access dashboard (should redirect to login)
         response = client.get('/dashboard')

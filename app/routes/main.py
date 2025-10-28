@@ -153,7 +153,7 @@ def vote():
         flash_once('You have already voted.')
         return redirect(url_for('main.dashboard'))
     
-    #flash_once('Vote cast successfully!')
+    flash_once('Vote cast successfully!')
     return redirect(url_for('main.dashboard'))
 
 @main.route("/results")

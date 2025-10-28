@@ -60,7 +60,7 @@ def test_pii_encrypted_at_rest(app):
 
 def test_admin_can_view_pii(client, app):
     # Login as admin (created in tests/conftest.py)
-    resp = client.post("/login", data={"username": "admin", "password": "AdminSecurePass123!"}, follow_redirects=True)
+    resp = client.post("/login", data={"username": "admin", "password": "Admin@123456!"}, follow_redirects=True)
     assert resp.status_code == 200
 
     # Admin voters page should include decrypted full name
@@ -71,7 +71,7 @@ def test_admin_can_view_pii(client, app):
 
 def test_voter_cannot_view_admin_voters(client, app):
     # Login as regular voter
-    resp = client.post("/login", data={"username": "voter1", "password": "VoterSecurePass123!"}, follow_redirects=True)
+    resp = client.post("/login", data={"username": "voter1", "password": "Password@123!"}, follow_redirects=True)
     assert resp.status_code == 200
 
     # Attempt to access admin voters page; should redirect or show access denied without PII

@@ -16,6 +16,11 @@ def app():
     # Create a temporary database for testing
     db_fd, db_path = tempfile.mkstemp()
 
+    # Set a consistent encryption key for testing to ensure reproducible results
+    # This key is only used in tests and should never be used in production
+    test_encryption_key = "SdJcGfF7m2Kly1lpi/53LOineNBCJz9FFiJWM4GNUDg="  # 32-byte key for ChaCha20Poly1305
+    os.environ['VOTER_PII_KEY_BASE64'] = test_encryption_key
+
     app = create_app({
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
