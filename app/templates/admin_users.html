@@ -101,7 +101,7 @@
                 {% if u.account_status != 'rejected' %}
                   <form action="{{ url_for('admin_users.reject_user', user_id=u.id) }}" method="post" class="d-inline">
                     <button type="submit" class="btn btn-danger" title="Reject User"
-                            onclick="return confirm('Reject user {{ u.username }}?')">
+                            onclick="return confirm('Reject this user?')">
                       <i class="fas fa-times"></i>
                     </button>
                   </form>
