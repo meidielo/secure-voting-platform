@@ -16,6 +16,7 @@ except Exception:
     # metrics may not be available in some environments; degrade silently
     login_nonce_failures = gotcha_triggers = turnstile_failures = None
 
+from werkzeug.security import generate_password_hash
 from app import db
 from app.models import User, Role, Region, ElectoralRoll
 from app.security.password_validator import validate_password_strength, PasswordValidationError
@@ -223,11 +224,10 @@ def login():
             # Don't reveal whether the username exists. Log internally but show
             # a generic error to the client to prevent user enumeration.
             logging.warning(f"Failed login attempt for unknown username: '{username}'")
-            # small delay to make timing for non-existent vs bad-password closer
-            try:
-                time.sleep(0.15)
-            except Exception:
-                pass
+            # Perform a dummy password hash so the response time is identical
+            # to a real user with a wrong password. This avoids both the timing
+            # side-channel and the DoS vector of thread-blocking sleeps.
+            generate_password_hash("dummy-password-constant-time-equalization")
             flash_once('Invalid username or password')
             return render_template('login.html', prev_username=username)
         
@@ -239,31 +239,19 @@ def login():
 
         # --- Step 2: password must match ---
         if not password or not user.check_password(password):
-            # Generic message for both unknown user and wrong password to avoid
-            # leaking account existence. Keep server-side logs with IP for audit.
+            # Generic message — don't leak whether user exists or password was wrong.
             forwarded_for = request.headers.get('X-Forwarded-For')
             user_ip = forwarded_for.split(',')[0].strip() if forwarded_for else request.remote_addr
             logging.warning(f"Failed login attempt for username: '{username}' from IP: {user_ip}")
-            try:
-                time.sleep(0.15)
-            except Exception:
-                pass
-            flash_once('Invalid username or password')
-            # Record failed login attempt
+            # No sleep — the password hash computation already provides constant-time behavior.
             user.record_failed_login()
             db.session.commit()
-            
-            flash('Invalid password')
-            
-            # Get user's IP for logging failed attempts, as it's still useful.
-            forwarded_for = request.headers.get('X-Forwarded-For')
-            user_ip = forwarded_for.split(',')[0].strip() if forwarded_for else request.remote_addr
-            logging.warning(f"Failed login attempt for username: '{username}' from IP: {user_ip}")
-            
-            # Inform user if account is now locked
+
+            flash_once('Invalid username or password')
+
             if user.is_account_locked():
                 flash('Account has been locked due to multiple failed login attempts. Please try again in 30 minutes or contact support.', 'error')
-            
+
             return render_template('login.html', prev_username=username)
           
 

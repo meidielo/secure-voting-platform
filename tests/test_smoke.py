@@ -61,7 +61,7 @@ class TestSmokeTests:
         }, follow_redirects=True)
 
         assert response.status_code == 200
-        assert b'Invalid password' in response.data
+        assert b'Invalid username or password' in response.data
 
     def test_dashboard_requires_login(self, client):
         """Test that dashboard requires authentication."""
@@ -104,12 +104,13 @@ class TestSmokeTests:
         # Should show "Vote cast successfully" on dashboard after voting
         assert b'Vote cast successfully' in response.data
 
-        # Verify vote was recorded
+        # Verify vote was recorded (vote is anonymous — check by candidate, not user)
         with client.application.app_context():
             user = User.query.filter_by(username='voter1').first()
-            vote = Vote.query.filter_by(user_id=user.id).first()
+            assert user.has_voted is True
+            # The Vote table no longer stores user_id; verify a vote exists for the candidate
+            vote = Vote.query.filter_by(candidate_id=candidate.id).first()
             assert vote is not None
-            assert vote.candidate_id == candidate.id
 
     def test_admin_results_access(self, client):
         """Test that admin can access results page."""

@@ -161,7 +161,7 @@ class User(UserMixin, db.Model):
         return f"<User {self.username} ({self.role.name if self.role else 'no-role'})>"
 
 
-# ---- Helpers for deterministic licence hashing ----
+# ---- Helpers for deterministic licence hashing (blind indexing) ----
 _WS_RE = re.compile(r"\s+")
 
 def _normalize_lic(lic: str | None) -> str | None:
@@ -171,11 +171,40 @@ def _normalize_lic(lic: str | None) -> str | None:
     return _WS_RE.sub("", str(lic)).upper()
 
 
+def _get_hash_pepper() -> bytes:
+    """
+    Return the LICENSE_HASH_PEPPER from the environment.
+    This high-entropy secret is mixed into HMAC-based blind indexes
+    so that raw SHA-256 rainbow tables are useless.
+    """
+    import os
+    pepper = os.environ.get("LICENSE_HASH_PEPPER", "")
+    if not pepper:
+        # Fall back to SECRET_KEY if pepper not set (dev convenience).
+        # Production deployments MUST set LICENSE_HASH_PEPPER.
+        from flask import current_app
+        try:
+            pepper = current_app.config.get("SECRET_KEY", "fallback-dev-pepper")
+        except RuntimeError:
+            pepper = "fallback-dev-pepper"
+    return pepper.encode("utf-8")
+
+
 def _hash_lic(lic: str | None) -> str | None:
+    """
+    Blind index: HMAC-SHA256 keyed with an application-wide pepper.
+    Produces a deterministic but brute-force-resistant hash suitable
+    for duplicate-detection queries without exposing plaintext.
+    """
+    import hmac as _hmac
     norm = _normalize_lic(lic)
     if not norm:
         return None
-    return hashlib.sha256(norm.encode("utf-8")).hexdigest()
+    return _hmac.new(
+        key=_get_hash_pepper(),
+        msg=norm.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
 
 
 # Keep driver_lic_hash in sync on insert/update
@@ -289,16 +318,24 @@ class Candidate(db.Model):
 
 # ---- Votes ----
 class Vote(db.Model):
+    """
+    Anonymous ballot record.
+
+    The voter's identity is NOT stored here. Instead, a one-way blind
+    voter_token (HMAC of user-id + app secret) enforces one-vote-per-person
+    at the DB level while making it computationally infeasible to reverse
+    the token back to a user without the application secret.
+
+    The user.has_voted flag is set separately as a fast application-level
+    guard, but the unique constraint on voter_token is the authoritative
+    enforcement.
+    """
     __tablename__ = "vote"
-    # Note: bind routing is enforced at the session level; the model itself
-    # does not hard-bind to keep testing/simple setups working on a single DB.
     __table_args__ = (
-        # Enforce one vote per user at the database level to prevent duplicates
-        db.UniqueConstraint('user_id', name='uq_vote_user_id'),
+        db.UniqueConstraint('voter_token', name='uq_vote_voter_token'),
     )
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"),
-                        nullable=False, index=True)
+    voter_token = db.Column(db.String(64), nullable=False, index=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey("candidate.id", ondelete="CASCADE"),
                              nullable=False, index=True)
     position = db.Column(db.String(120), nullable=False)

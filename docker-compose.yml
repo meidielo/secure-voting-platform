@@ -2,29 +2,25 @@ services:
   web:
     build: ./app
     container_name: voting_web
-    ports:
-      # 8000 is mapped for direct access (bypass WAF)
-      # This would be disabled unless penetration testing of the bare app is being performed
-      # - bare testing should be done in a separate isolated environment (like this project)
-      # - in production this port would be closed to external access
-      # - only the WAF port (80) would be exposed externally
-      - "8000:8000" 
+    # Port 8000 is internal only — all external traffic must go through the WAF.
+    # For local debugging without WAF, use: docker-compose exec web curl localhost:8000
     expose:
       - "8000"
     environment:
-      VOTING_ADMIN_USER: voting_admin
-      VOTING_ADMIN_PASS: adminpass
-      VOTING_VOTER_USER: voting_voter
-      VOTING_VOTER_PASS: voterpass
-      DATABASE_URL: mysql+pymysql://votinguser:votingpass@db:3306/votingdb
-      MYSQL_ROOT_PASSWORD: rootpass
-      DEBUG_DB_BIND: "true"
-      GEO_FILTER_ENABLED: "True"
+      VOTING_ADMIN_USER: ${VOTING_ADMIN_USER:-voting_admin}
+      VOTING_ADMIN_PASS: ${VOTING_ADMIN_PASS:?Set VOTING_ADMIN_PASS in .env}
+      VOTING_VOTER_USER: ${VOTING_VOTER_USER:-voting_voter}
+      VOTING_VOTER_PASS: ${VOTING_VOTER_PASS:?Set VOTING_VOTER_PASS in .env}
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-votinguser}:${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}@db:3306/${MYSQL_DATABASE:-votingdb}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      DEBUG_DB_BIND: ${DEBUG_DB_BIND:-false}
+      GEO_FILTER_ENABLED: ${GEO_FILTER_ENABLED:-True}
       GEOIP_DB_PATH: /data/GeoLite2-Country.mmdb
-      VOTER_PII_KEY_BASE64: "07+p3ggToAQUt+iO19uoJHJikDrbiUOImzVnwO7TU3M="
-      LOG_LEVEL: info
+      VOTER_PII_KEY_BASE64: ${VOTER_PII_KEY_BASE64:?Set VOTER_PII_KEY_BASE64 in .env}
+      LICENSE_HASH_PEPPER: ${LICENSE_HASH_PEPPER:?Set LICENSE_HASH_PEPPER in .env}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       VAULT_ADDR: "http://vault:8200"
-      VAULT_TOKEN: "vault-dev-token"
+      VAULT_TOKEN: ${VAULT_TOKEN:-vault-dev-token}
       VAULT_MOUNT: "transit"
       VAULT_KV_MOUNT: "kv"
       VAULT_TRANSIT_KEY: "results-signing"
@@ -72,24 +68,24 @@ services:
     platform: linux/amd64
     container_name: voting_db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: votingdb
-      MYSQL_USER: votinguser
-      MYSQL_PASSWORD: votingpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-votingdb}
+      MYSQL_USER: ${MYSQL_USER:-votinguser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
     volumes:
       - db_data:/var/lib/mysql
       # keep slow query logs on a host path
       # - ./mysql-logs:/var/log/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -prootpass || exit 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
     networks:
       - db_net
-    ports:
-      - "33306:3306"
+    # Database is internal only — no host port mapping in production.
+    # For local debugging: docker-compose exec db mysql -u votinguser -p votingdb
     restart: unless-stopped
     logging:
       driver: json-file
