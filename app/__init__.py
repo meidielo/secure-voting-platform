@@ -216,6 +216,7 @@ def create_app(test_config=None):
     from app.routes.metrics import metrics_bp
     from app.routes.password_reset import password_reset_bp
     from app.routes.elections import elections_bp
+    from app.routes.audit import audit_bp
     app.register_blueprint(auth.auth)
     app.register_blueprint(main.main)
     app.register_blueprint(dev_routes.dev)
@@ -227,6 +228,7 @@ def create_app(test_config=None):
     app.register_blueprint(password.password_bp)
     app.register_blueprint(password_reset_bp)
     app.register_blueprint(elections_bp)
+    app.register_blueprint(audit_bp)
 
     # expose Prometheus metrics at /metrics (metrics blueprint is optional)
     try:

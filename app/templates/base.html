@@ -10,15 +10,21 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </head>
   <body>
+    <!-- Skip to content link for keyboard/screen-reader users -->
+    <a href="#main-content" class="visually-hidden-focusable position-absolute top-0 start-0 p-2 bg-primary text-white">
+      Skip to main content
+    </a>
+
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4" aria-label="Main navigation">
       <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.login') }}">
           <img src="{{ url_for('static', filename='logo.svg') }}" alt="notAEC Logo" width="40" height="40" class="me-2">
           notAEC
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"
+                aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -38,6 +44,11 @@
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('main.results') }}">Results</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('audit.view_audit_log') }}">
+                  <i class="fas fa-shield-alt me-1"></i>Audit Log
+                </a>
               </li>
               {% endif %}
 
@@ -100,7 +111,7 @@
     </div>
 
     <!-- Page content -->
-    <main class="container">
+    <main id="main-content" class="container" role="main">
       {% block content %}{% endblock %}
     </main>
 
