@@ -223,6 +223,7 @@
           </div>
           <form method="POST" action="{{ url_for('main.vote') }}" class="mt-auto"
                 onsubmit="return confirm('Cast your vote for {{ candidate.name }}? This action is final and cannot be undone.')">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="candidate_id" value="{{ candidate.id }}">
             <button type="submit" class="btn btn-primary btn-sm w-100" aria-label="Vote for {{ candidate.name }}">
               <i class="fas fa-check me-1"></i> Vote

@@ -59,6 +59,7 @@
         {% endif %}
 
         <form action="#" method="post">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label for="election" class="form-label">Election</label>
             <select id="election" name="election" class="form-control">

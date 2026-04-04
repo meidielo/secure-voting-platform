@@ -9,6 +9,7 @@
     <div class="card-header">Create New Election</div>
     <div class="card-body">
       <form method="POST" action="{{ url_for('elections.create_election') }}" class="row g-3">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <div class="col-md-4">
           <label for="name" class="form-label">Election Name</label>
           <input type="text" class="form-control" id="name" name="name"
@@ -68,6 +69,7 @@
           <td>
             {% if e.status == 'draft' %}
               <form action="{{ url_for('elections.open_election', election_id=e.id) }}" method="post" class="d-inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-success" title="Open Election"
                         onclick="return confirm('Open this election for voting?')">
                   <i class="fas fa-play"></i> Open
@@ -75,6 +77,7 @@
               </form>
             {% elif e.status == 'open' %}
               <form action="{{ url_for('elections.close_election', election_id=e.id) }}" method="post" class="d-inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-danger" title="Close Election"
                         onclick="return confirm('Close this election? No more votes will be accepted.')">
                   <i class="fas fa-stop"></i> Close

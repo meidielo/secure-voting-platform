@@ -80,6 +80,7 @@
           <div class="d-flex gap-1">
             {% if u.account_status != 'approved' %}
               <form action="{{ url_for('admin_users.approve_user', user_id=u.id) }}" method="post" class="d-inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-success btn-sm" title="Approve">
                   <i class="fas fa-check"></i>
                 </button>
@@ -87,6 +88,7 @@
             {% endif %}
             {% if u.account_status != 'rejected' %}
               <form action="{{ url_for('admin_users.reject_user', user_id=u.id) }}" method="post" class="d-inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-danger btn-sm" title="Reject"
                         onclick="return confirm('Reject this user?')">
                   <i class="fas fa-times"></i>
@@ -95,6 +97,7 @@
             {% endif %}
             {% if u.is_account_locked() %}
               <form action="{{ url_for('admin_users.unlock_user', user_id=u.id) }}" method="post" class="d-inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-warning btn-sm" title="Unlock">
                   <i class="fas fa-unlock"></i>
                 </button>

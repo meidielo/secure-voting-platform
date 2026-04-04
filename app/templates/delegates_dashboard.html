@@ -71,6 +71,7 @@
       </div>
       <div class="card-body">
         <form method="post" action="{{ url_for('candidates.create_candidate') }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <div class="row g-3">
             <div class="col-md-3">
               <label class="form-label">Name</label>
@@ -149,6 +150,7 @@
                   <!-- DELETE -->
                   <form method="post" action="{{ url_for('candidates.delete_candidate', candidate_id=c.id) }}"
                         onsubmit="return confirm('Delete {{ c.name }}?');">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-sm btn-outline-danger" type="submit">
                       <i class="fa-regular fa-trash-can"></i> Delete
                     </button>
@@ -173,6 +175,7 @@
 <div class="modal fade" id="editCandidateModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <form method="POST" id="editCandidateForm">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Edit candidate</h5>

@@ -55,6 +55,7 @@
         {% endwith %}
 
         <form id="loginForm" action="{{ url_for('auth.login') }}" method="post" novalidate>
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <!-- Honeypot -->
           <input type="text" name="gotcha" id="gotcha_field" autocomplete="off" tabindex="-1"
                  style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">

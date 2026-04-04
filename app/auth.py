@@ -146,9 +146,17 @@ def login():
                 s = URLSafeTimedSerializer(current_app.config.get('SECRET_KEY') or current_app.secret_key, salt='login-nonce')
                 # nonce valid for 5 minutes
                 nonce_value = s.loads(login_nonce, max_age=300)
-                # optional: ensure nonce_value contains expected structure; we used random hex
                 if not isinstance(nonce_value, str):
                     raise BadSignature('invalid nonce')
+
+                # Prevent nonce reuse: track consumed nonces in session
+                used_nonces = session.get('_used_nonces', [])
+                if nonce_value in used_nonces:
+                    raise BadSignature('nonce already consumed')
+                used_nonces.append(nonce_value)
+                # Keep only last 10 to avoid session bloat
+                session['_used_nonces'] = used_nonces[-10:]
+
             except SignatureExpired:
                 try:
                     if login_nonce_failures:
@@ -262,10 +270,17 @@ def login():
             session['mfa_pending_next'] = request.args.get('next', '')
 
             # Auto-send OTP email
+            # SECURITY: Store only the HMAC hash of the OTP in the session,
+            # not the plaintext code. Flask sessions are signed but not
+            # encrypted — the plaintext would be readable from the cookie.
             try:
-                import random, string
+                import random, string, hashlib, hmac as _hmac
                 code = ''.join(random.choices(string.digits, k=6))
-                session['otp_code'] = code
+                otp_hash = _hmac.new(
+                    (current_app.config.get('SECRET_KEY') or 'dev').encode(),
+                    code.encode(), hashlib.sha256
+                ).hexdigest()
+                session['otp_hash'] = otp_hash
                 session['otp_user'] = user.id
                 session['otp_expires_at'] = time.time() + 300
                 session['otp_attempts'] = 0
@@ -340,37 +355,43 @@ def verify_mfa():
         return redirect(url_for('auth.login'))
 
     if request.method == 'POST':
+        import hashlib, hmac as _hmac
         otp_input = request.form.get('otp', '').strip()
-        sess_code = session.get('otp_code')
+        sess_hash = session.get('otp_hash')
         sess_user = session.get('otp_user')
         expires_at = session.get('otp_expires_at')
 
-        if not (sess_code and sess_user and expires_at):
+        if not (sess_hash and sess_user and expires_at):
             flash('Verification code expired. Please sign in again.', 'error')
             session.pop('mfa_pending_user_id', None)
             return redirect(url_for('auth.login'))
 
         if sess_user != user.id or time.time() > float(expires_at):
-            for k in ('otp_code', 'otp_user', 'otp_expires_at', 'otp_attempts', 'mfa_pending_user_id'):
+            for k in ('otp_hash', 'otp_user', 'otp_expires_at', 'otp_attempts', 'mfa_pending_user_id'):
                 session.pop(k, None)
             flash('Verification code expired. Please sign in again.', 'error')
             return redirect(url_for('auth.login'))
 
         attempts = session.get('otp_attempts', 0)
         if attempts >= 5:
-            for k in ('otp_code', 'otp_user', 'otp_expires_at', 'otp_attempts', 'mfa_pending_user_id'):
+            for k in ('otp_hash', 'otp_user', 'otp_expires_at', 'otp_attempts', 'mfa_pending_user_id'):
                 session.pop(k, None)
             flash('Too many attempts. Please sign in again.', 'error')
             return redirect(url_for('auth.login'))
 
-        if not otp_input or otp_input != sess_code:
+        # Compare HMAC hash of input against stored hash (constant-time)
+        input_hash = _hmac.new(
+            (current_app.config.get('SECRET_KEY') or 'dev').encode(),
+            otp_input.encode(), hashlib.sha256
+        ).hexdigest()
+        if not otp_input or not _hmac.compare_digest(input_hash, sess_hash):
             session['otp_attempts'] = attempts + 1
             flash('Invalid verification code.', 'error')
             return render_template('verify_mfa.html', email=user.email)
 
         # OTP valid — clear session and complete login
         next_url = session.get('mfa_pending_next', '')
-        for k in ('otp_code', 'otp_user', 'otp_expires_at', 'otp_attempts', 'mfa_pending_user_id', 'mfa_pending_next'):
+        for k in ('otp_hash', 'otp_user', 'otp_expires_at', 'otp_attempts', 'mfa_pending_user_id', 'mfa_pending_next'):
             session.pop(k, None)
 
         return _complete_login(user, next_url or None)

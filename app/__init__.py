@@ -68,7 +68,8 @@ def create_app(test_config=None):
         # Generate a random 32-byte key and encode it in base64
         key = base64.b64encode(os.urandom(32))
         os.environ['VOTER_PII_KEY_BASE64'] = key.decode()
-        app.logger.warning("Generated new encryption key: %s", key.decode())
+        # SECURITY: Never log key material — only log that generation occurred
+        app.logger.warning("Generated new encryption key (set VOTER_PII_KEY_BASE64 in env for production)")
     
     ChaChaEncryptionService.initialize(os.environ.get('VOTER_PII_KEY_BASE64'))
     # register blueprints and other stuff here
@@ -208,6 +209,10 @@ def create_app(test_config=None):
         migrate.init_app(app, db)
     except Exception as e:
         app.logger.warning(f"Flask-Migrate initialization failed: {e}")
+
+    # CSRF protection
+    from app.security.csrf import init_csrf
+    init_csrf(app)
 
     # import blueprints (auth and main routes already in repo)
     from app import auth
@@ -363,6 +368,15 @@ def create_app(test_config=None):
             return None
 
         if user:
+            # Block expired-password users from continuing — force password change
+            if user.is_password_expired() and request.endpoint not in (
+                'password.change_password', 'auth.logout', 'static'
+            ):
+                login_user(user, remember=False)
+                from flask import flash
+                flash('Your password has expired. Please change it to continue.', 'warning')
+                return redirect(url_for('password.change_password'))
+
             login_user(user, remember=False)
 
             # sliding expiration: refresh if less than half lifetime remains
@@ -372,9 +386,9 @@ def create_app(test_config=None):
             exp = payload.get('exp', now)
             lifetime = exp - iat
             if lifetime > 0 and (exp - now) < (lifetime // 2):
-                # Defer cookie setting to a single global after_request by storing
-                # the new token on flask.g for this request.
-                g._new_session_token = issue_token(user.id)
+                # Only refresh if password is still valid
+                if not user.is_password_expired():
+                    g._new_session_token = issue_token(user.id)
 
         return None
 
