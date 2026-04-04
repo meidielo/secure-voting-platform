@@ -70,7 +70,8 @@
             <div class="col-md-8 mb-3">
               <label for="driver_lic_no" class="form-label">Driver Licence Number</label>
               <input type="text" class="form-control" id="driver_lic_no" name="driver_lic_no" required
-                     placeholder="e.g. DL123458" minlength="6" maxlength="10" pattern="[A-Za-z0-9]{6,10}">
+                     placeholder="e.g. DL123458" minlength="6" maxlength="10" pattern="[A-Za-z0-9]{6,10}"
+                     style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="col-md-4 mb-3">
               <label for="driver_lic_state" class="form-label">State</label>
