@@ -18,6 +18,7 @@ services:
       GEOIP_DB_PATH: /data/GeoLite2-Country.mmdb
       VOTER_PII_KEY_BASE64: ${VOTER_PII_KEY_BASE64:?Set VOTER_PII_KEY_BASE64 in .env}
       LICENSE_HASH_PEPPER: ${LICENSE_HASH_PEPPER:?Set LICENSE_HASH_PEPPER in .env}
+      AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       VAULT_ADDR: "http://vault:8200"
       VAULT_TOKEN: ${VAULT_TOKEN:-vault-dev-token}

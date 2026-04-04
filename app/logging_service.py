@@ -45,6 +45,12 @@ class HmacAuditHandler(logging.Handler):
         # Open file handle lazily (append per write to avoid long-held handles)
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Write an HMAC-signed log entry with file locking.
+
+        A lock file serializes writes across multiple Gunicorn workers
+        so the HMAC chain remains linear and verifiable.
+        """
+        import fcntl
         try:
             msg = self.format(record)
             payload = {
@@ -55,37 +61,46 @@ class HmacAuditHandler(logging.Handler):
                 'pathname': getattr(record, 'pathname', None),
                 'lineno': getattr(record, 'lineno', None),
             }
-            # Allow extra structured data if provided
             extra = getattr(record, 'extra', None)
             if extra:
                 payload['extra'] = extra
 
-            # include previous hmac for chain
-            payload['prev_hmac'] = self.last_hmac
-
-            # canonical JSON: sort keys, separators compact
-            canonical = json.dumps(payload, sort_keys=True, separators=(',', ':')).encode('utf-8')
-            h = hmac.new(self.key, canonical, hashlib.sha256).hexdigest()
-            payload['hmac'] = h
-
-            line = json.dumps(payload, ensure_ascii=False) + '\n'
-
-            # Append atomically
-            with open(self.path, 'a', encoding='utf-8') as f:
-                f.write(line)
-                f.flush()
+            # Acquire exclusive lock to serialize across workers
+            lock_path = self.path + '.lock'
+            with open(lock_path, 'a') as lock_f:
                 try:
-                    os.fsync(f.fileno())
-                except Exception:
-                    # Windows may not support fsync same way; ignore
-                    pass
+                    fcntl.flock(lock_f, fcntl.LOCK_EX)
 
-            # persist last_hmac to state file
-            try:
-                with open(self.state_path, 'w', encoding='utf-8') as sf:
-                    sf.write(h)
-            except Exception:
-                pass
+                    # Re-read last_hmac from state file (another worker may have updated it)
+                    try:
+                        if os.path.exists(self.state_path):
+                            with open(self.state_path, 'r', encoding='utf-8') as sf:
+                                self.last_hmac = sf.read().strip() or None
+                    except Exception:
+                        pass
+
+                    payload['prev_hmac'] = self.last_hmac
+
+                    canonical = json.dumps(payload, sort_keys=True, separators=(',', ':')).encode('utf-8')
+                    h = hmac.new(self.key, canonical, hashlib.sha256).hexdigest()
+                    payload['hmac'] = h
+
+                    line = json.dumps(payload, ensure_ascii=False) + '\n'
+
+                    with open(self.path, 'a', encoding='utf-8') as f:
+                        f.write(line)
+                        f.flush()
+
+                    # Persist last_hmac for next entry
+                    self.last_hmac = h
+                    try:
+                        with open(self.state_path, 'w', encoding='utf-8') as sf:
+                            sf.write(h)
+                    except Exception:
+                        pass
+
+                finally:
+                    fcntl.flock(lock_f, fcntl.LOCK_UN)
 
             self.last_hmac = h
         except Exception:
