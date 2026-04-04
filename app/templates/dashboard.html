@@ -2,170 +2,184 @@
 {% block title %}Dashboard - SecureVote{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-md-12">
+{% set enrol = current_user.enrolment if current_user.is_authenticated else None %}
+{% set eligible = current_user.is_authenticated
+                  and current_user.is_voter
+                  and not current_user.has_voted
+                  and enrol is not none
+                  and enrol.status == 'active'
+                  and enrol.verified %}
 
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>Welcome, {{ current_user.username }}</h2>
-      <span class="badge bg-secondary fs-6">
-        <i class="fas fa-id-badge me-1"></i>{{ current_user.role.name|title if current_user.role else 'Unknown' }}
-      </span>
-    </div>
-
-    <!-- Status Cards Row -->
-    {% set enrol = current_user.enrolment if current_user.is_authenticated else None %}
-    <div class="row mb-4">
-      <!-- Account Status -->
-      <div class="col-md-4 mb-3">
-        <div class="card h-100 border-start border-4 {{ 'border-success' if current_user.is_approved else 'border-warning' }}">
-          <div class="card-body">
-            <h6 class="card-subtitle text-muted mb-2"><i class="fas fa-user-check me-1"></i> Account</h6>
-            {% if current_user.is_approved %}
-              <span class="badge bg-success">Approved</span>
-            {% else %}
-              <span class="badge bg-warning">{{ current_user.account_status|title }}</span>
-            {% endif %}
-            {% if current_user.email_verified %}
-              <span class="badge bg-info ms-1"><i class="fas fa-envelope-circle-check"></i> Email Verified</span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Region / Enrolment -->
-      <div class="col-md-4 mb-3">
-        <div class="card h-100 border-start border-4 {{ 'border-primary' if enrol else 'border-secondary' }}">
-          <div class="card-body">
-            <h6 class="card-subtitle text-muted mb-2"><i class="fas fa-map-marker-alt me-1"></i> Enrolment</h6>
-            {% if enrol %}
-              <p class="mb-1"><strong>Region:</strong> {{ enrol.region.name if enrol.region else 'N/A' }}</p>
-              <p class="mb-0">
-                <span class="badge {{ 'bg-success' if enrol.status == 'active' else 'bg-warning' }}">{{ enrol.status|title }}</span>
-                {% if enrol.verified %}
-                  <span class="badge bg-success ms-1">Verified</span>
-                {% else %}
-                  <span class="badge bg-warning ms-1">Unverified</span>
-                {% endif %}
-              </p>
-            {% else %}
-              <span class="text-muted">Not enrolled</span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Vote Status -->
-      <div class="col-md-4 mb-3">
-        <div class="card h-100 border-start border-4 {{ 'border-success' if current_user.has_voted else 'border-info' }}">
-          <div class="card-body">
-            <h6 class="card-subtitle text-muted mb-2"><i class="fas fa-vote-yea me-1"></i> Vote Status</h6>
-            {% if current_user.has_voted %}
-              <span class="badge bg-success"><i class="fas fa-check-double me-1"></i> Vote Recorded</span>
-            {% elif eligible and election_open %}
-              <span class="badge bg-info">Ready to Vote</span>
-            {% else %}
-              <span class="badge bg-secondary">Not Yet</span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Election status banner -->
-    {% if active_election and election_open %}
-      <div class="alert alert-success" role="status">
-        <i class="fas fa-check-circle me-1"></i>
-        <strong>{{ active_election.name }}</strong> is open for voting.
-        {% if active_election.close_at %}
-          Closes: {{ active_election.close_at.strftime('%d %B %Y at %H:%M UTC') }}
-        {% endif %}
-      </div>
-    {% elif not election_open and not current_user.has_voted %}
-      <div class="alert alert-secondary" role="status">
-        <i class="fas fa-info-circle me-1"></i>
-        No election is currently open for voting.
-      </div>
-    {% endif %}
-
-    <!-- Already voted message -->
-    {% if current_user.has_voted %}
-      <div class="alert alert-success" role="status">
-        <h4><i class="fas fa-check-circle me-1"></i> Thank you for voting!</h4>
-        <p class="mb-0">Your anonymous ballot has been recorded. It cannot be traced back to your identity.</p>
-      </div>
-    {% endif %}
-
-    <!-- Compute voting eligibility (matches backend rules) -->
-    {% set eligible = current_user.is_authenticated
-                      and current_user.is_voter
-                      and not current_user.has_voted
-                      and enrol is not none
-                      and enrol.status == 'active'
-                      and enrol.verified %}
-
-    <!-- Eligibility warning -->
-    {% if not eligible and not current_user.has_voted and current_user.is_voter %}
-      <div class="alert alert-warning" role="alert">
-        <h5><i class="fas fa-exclamation-triangle me-1"></i> You are not eligible to vote.</h5>
-        <ul class="mb-0">
-          {% if enrol is none %}
-            <li>You are not found in the electoral roll. Complete registration with your driver licence.</li>
-          {% else %}
-            {% if enrol.status != 'active' %}
-              <li>Your electoral roll status is <strong>{{ enrol.status }}</strong> (must be <strong>active</strong>).</li>
-            {% endif %}
-            {% if not enrol.verified %}
-              <li>Your electoral roll entry is not yet verified by an administrator.</li>
-            {% endif %}
-          {% endif %}
-          {% if not current_user.is_approved %}
-            <li>Your account is pending admin approval.</li>
-          {% endif %}
-        </ul>
-      </div>
-    {% endif %}
-
-    <!-- Voting Section -->
-    {% if eligible and election_open %}
-      <div class="alert alert-info" role="alert">
-        <h4><i class="fas fa-ballot-check me-1"></i> Cast Your Vote</h4>
-        <p class="mb-0">Select one candidate from your region. You can only vote once. Your vote is anonymous.</p>
-      </div>
-
-      <div class="row">
-        {% for candidate in candidates %}
-          {% if enrol and candidate.region_id == enrol.region_id %}
-          <div class="col-md-4 mb-3">
-            <div class="card h-100 shadow-sm">
-              <div class="card-body d-flex flex-column">
-                <h5 class="card-title">{{ candidate.name }}</h5>
-                <p class="card-text mb-3">
-                  <strong>Party:</strong> {{ candidate.party or 'Independent' }}<br>
-                  <strong>Position:</strong> {{ candidate.position }}<br>
-                  <strong>Region:</strong> {{ candidate.region.name }}
-                </p>
-                <form method="POST" action="{{ url_for('main.vote') }}" class="mt-auto"
-                      onsubmit="return confirm('Cast your vote for {{ candidate.name }}? This cannot be undone.')">
-                  <input type="hidden" name="candidate_id" value="{{ candidate.id }}">
-                  <button type="submit" class="btn btn-primary w-100" aria-label="Vote for {{ candidate.name }}">
-                    <i class="fas fa-check me-1"></i> Vote for {{ candidate.name }}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-        {% endfor %}
-      </div>
-
-      {% if enrol and (candidates|selectattr('region_id', 'equalto', enrol.region_id)|list|length == 0) %}
-        <div class="alert alert-secondary mt-3">
-          <i class="fas fa-info-circle me-1"></i> There are currently no candidates available in your region.
-        </div>
+<!-- Welcome -->
+<div class="sv-page-header">
+  <div>
+    <h2 style="margin-bottom:.25rem">Welcome back, {{ current_user.username }}</h2>
+    <p class="text-muted mb-0" style="font-size:.875rem">
+      {% if current_user.has_voted %}
+        Your anonymous ballot has been recorded.
+      {% elif eligible and election_open %}
+        You're eligible to vote. Cast your ballot below.
+      {% elif not election_open %}
+        No election is currently open.
+      {% else %}
+        Check your eligibility status below.
       {% endif %}
-    {% endif %}
-
+    </p>
   </div>
 </div>
+
+<!-- Status Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="sv-stat-card">
+      <div class="stat-label">Account</div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        {% if current_user.is_approved %}
+          <span class="sv-badge sv-badge-success">Approved</span>
+        {% else %}
+          <span class="sv-badge sv-badge-warning">{{ current_user.account_status|title }}</span>
+        {% endif %}
+        {% if current_user.email_verified %}
+          <span class="sv-badge sv-badge-info">Email Verified</span>
+        {% endif %}
+        <span class="sv-badge sv-badge-neutral">{{ current_user.role.name|title if current_user.role else 'Unknown' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="sv-stat-card">
+      <div class="stat-label">Enrolment</div>
+      {% if enrol %}
+        <p class="mb-1" style="font-size:.875rem"><strong>{{ enrol.region.name if enrol.region else 'N/A' }}</strong></p>
+        <div class="d-flex gap-2">
+          <span class="sv-badge {{ 'sv-badge-success' if enrol.status == 'active' else 'sv-badge-warning' }}">{{ enrol.status|title }}</span>
+          {% if enrol.verified %}
+            <span class="sv-badge sv-badge-success">Verified</span>
+          {% else %}
+            <span class="sv-badge sv-badge-warning">Unverified</span>
+          {% endif %}
+        </div>
+      {% else %}
+        <span class="text-muted" style="font-size:.875rem">Not enrolled</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="sv-stat-card">
+      <div class="stat-label">Vote Status</div>
+      {% if current_user.has_voted %}
+        <span class="sv-badge sv-badge-success"><i class="fas fa-check-double me-1" style="font-size:.6rem"></i> Ballot Recorded</span>
+      {% elif eligible and election_open %}
+        <span class="sv-badge sv-badge-info">Ready to Vote</span>
+      {% else %}
+        <span class="sv-badge sv-badge-neutral">Not Yet</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Election Banner -->
+{% if active_election and election_open %}
+<div class="sv-card mb-4" style="border-left: 4px solid var(--sv-accent)">
+  <div class="card-body d-flex align-items-center gap-3">
+    <div style="width:40px; height:40px; background:#ecfdf5; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0">
+      <i class="fas fa-check-circle" style="color:var(--sv-accent); font-size:1.25rem"></i>
+    </div>
+    <div>
+      <strong>{{ active_election.name }}</strong> is open for voting
+      {% if active_election.close_at %}
+        <span class="text-muted" style="font-size:.8rem"> &middot; Closes {{ active_election.close_at.strftime('%d %B %Y at %H:%M UTC') }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% elif not election_open and not current_user.has_voted %}
+<div class="alert alert-info">
+  <i class="fas fa-info-circle me-1"></i> No election is currently open for voting.
+</div>
+{% endif %}
+
+<!-- Already Voted -->
+{% if current_user.has_voted %}
+<div class="sv-card mb-4" style="border-left: 4px solid var(--sv-accent)">
+  <div class="card-body text-center py-4">
+    <div style="width:56px; height:56px; background:#ecfdf5; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto .75rem">
+      <i class="fas fa-check-double" style="color:var(--sv-accent); font-size:1.5rem"></i>
+    </div>
+    <h4 style="margin-bottom:.25rem">Thank you for voting!</h4>
+    <p class="text-muted mb-0" style="font-size:.875rem">Your anonymous ballot has been recorded. It cannot be traced back to your identity.</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Eligibility Warning -->
+{% if not eligible and not current_user.has_voted and current_user.is_voter %}
+<div class="alert alert-warning">
+  <strong><i class="fas fa-exclamation-triangle me-1"></i> Not eligible to vote</strong>
+  <ul class="mb-0 mt-2" style="font-size:.875rem">
+    {% if enrol is none %}
+      <li>You are not on the electoral roll. Complete registration with your driver licence.</li>
+    {% else %}
+      {% if enrol.status != 'active' %}
+        <li>Your enrolment status is <strong>{{ enrol.status }}</strong> (must be active).</li>
+      {% endif %}
+      {% if not enrol.verified %}
+        <li>Your enrolment is not yet verified by an administrator.</li>
+      {% endif %}
+    {% endif %}
+    {% if not current_user.is_approved %}
+      <li>Your account is pending admin approval.</li>
+    {% endif %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- Voting Section -->
+{% if eligible and election_open and not current_user.has_voted %}
+<h5 class="mb-3" style="font-weight:600">
+  <i class="fas fa-vote-yea me-2 text-primary"></i>Cast your vote
+  {% if enrol and enrol.region %}
+    <span class="text-muted" style="font-size:.8rem; font-weight:400"> &middot; {{ enrol.region.name }} candidates</span>
+  {% endif %}
+</h5>
+
+<div class="row g-3 mb-4">
+  {% set region_candidates = [] %}
+  {% for candidate in candidates %}
+    {% if enrol and candidate.region_id == enrol.region_id %}
+    <div class="col-md-4">
+      <div class="sv-card h-100" style="transition: box-shadow .2s, transform .2s; cursor:default">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <h6 class="mb-0" style="font-weight:600">{{ candidate.name }}</h6>
+          </div>
+          <div class="mb-3" style="font-size:.8rem; color:var(--sv-muted)">
+            {% if candidate.party %}
+              <span class="sv-badge sv-badge-info mb-1">{{ candidate.party }}</span><br>
+            {% endif %}
+            {{ candidate.position }}
+          </div>
+          <form method="POST" action="{{ url_for('main.vote') }}" class="mt-auto"
+                onsubmit="return confirm('Cast your vote for {{ candidate.name }}? This action is final and cannot be undone.')">
+            <input type="hidden" name="candidate_id" value="{{ candidate.id }}">
+            <button type="submit" class="btn btn-primary btn-sm w-100" aria-label="Vote for {{ candidate.name }}">
+              <i class="fas fa-check me-1"></i> Vote
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+{% if enrol and (candidates|selectattr('region_id', 'equalto', enrol.region_id)|list|length == 0) %}
+  <div class="alert alert-info">
+    <i class="fas fa-info-circle me-1"></i> No candidates are registered in your region yet.
+  </div>
+{% endif %}
+{% endif %}
+
 {% endblock %}

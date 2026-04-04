@@ -50,12 +50,15 @@ def _checksum11(s: str) -> int:
 
 def validate_driver_lic(lic_no: str, state: str | None = None) -> bool:
     """
-    Simplified driver's licence validation (demo-friendly):
-      - 6..10 alphanumeric
-      - last char is checksum:
-          * if checksum == 10 -> last must be 'X'
-          * else last must equal the checksum digit
+    Driver licence validation:
+      - 6..10 alphanumeric characters
       - optional AU state code filter
+
+    Note: checksum validation has been removed. The original demo
+    checksum (_checksum11) used a custom algorithm that real users
+    cannot compute, making registration impossible without documentation.
+    In production this would integrate with a real identity verification
+    service (e.g. DVS — Document Verification Service).
     """
     if not lic_no:
         return False
@@ -67,11 +70,7 @@ def validate_driver_lic(lic_no: str, state: str | None = None) -> bool:
         if state.upper() not in {"ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"}:
             return False
 
-    chk = _checksum11(lic)
-    last = lic[-1].upper()
-    if chk == 10:
-        return last == 'X'
-    return last.isdigit() and int(last) == chk
+    return True
 
 def _map_state_to_region(state_code: str | None) -> Region | None:
     """

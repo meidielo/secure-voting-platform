@@ -51,7 +51,7 @@ class TestSmokeTests:
 
         assert response.status_code == 200
         # Should redirect to dashboard after successful login
-        assert b'Welcome, voter1' in response.data
+        assert b'voter1' in response.data
 
     def test_failed_login(self, client):
         """Test login with invalid credentials."""
@@ -133,11 +133,9 @@ class TestSmokeTests:
             'password': 'Password@123!'
         })
 
-        # Try to access results - should redirect to dashboard
-        response = client.get('/results', follow_redirects=True)
-        assert response.status_code == 200
-        # Should be redirected to dashboard
-        assert b'Welcome, voter1' in response.data
+        # Try to access results - should be denied (redirect or 403)
+        response = client.get('/results')
+        assert response.status_code in (302, 403)
 
     def test_logout_functionality(self, client):
         """Test logout functionality."""

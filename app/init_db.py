@@ -69,6 +69,30 @@ def make_lic(body: str) -> str:
     return body + ("X" if chk == 10 else str(chk))
 
 
+def _safe_add_columns(engine):
+    """Add columns that may be missing from older schema versions.
+    Uses raw SQL so existing data is preserved on upgrade."""
+    from sqlalchemy import text
+    migrations = [
+        ("user", "email_verified", "TINYINT(1) NOT NULL DEFAULT 0"),
+        ("vote_receipt", None, None),  # entire table
+    ]
+    with engine.connect() as conn:
+        for table, col, col_def in migrations:
+            if col is None:
+                # Table-level: create_all already handles this
+                continue
+            try:
+                conn.execute(text(
+                    f"ALTER TABLE `{table}` ADD COLUMN `{col}` {col_def}"
+                ))
+                conn.commit()
+                print(f"  + Added column {table}.{col}")
+            except Exception:
+                # Column already exists — expected on subsequent runs
+                conn.rollback()
+
+
 # -------------------------------------------------------------------
 # Seeding
 # -------------------------------------------------------------------
@@ -87,9 +111,13 @@ def init_database(app):
         # Wait for database to be ready
         wait_for_db()
 
-        # 1) create tables
+        # 1) create tables + add missing columns for schema upgrades
         try:
             db.metadata.create_all(db.engine)
+            # Add columns that may be missing from older schema versions.
+            # ALTER TABLE ... ADD COLUMN is idempotent-safe with IF NOT EXISTS (MySQL 8+)
+            # or we catch the "duplicate column" error and move on.
+            _safe_add_columns(db.engine)
         except Exception as e:
             print(f"❌ Failed to create database tables: {e}")
             print("💡 This may be a schema mismatch. Reset the DB or run migrations.")
@@ -434,7 +462,25 @@ def init_database(app):
             db.session.rollback()
             raise
 
-        # 6) commit
+        # 7) seed a default open election so voters can vote immediately
+        try:
+            from app.models import Election
+            if Election.query.count() == 0:
+                election = Election(
+                    name="Federal Election 2025",
+                    status="open",
+                    open_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    created_by=admin.id if admin else None,
+                )
+                db.session.add(election)
+                print("✅ Created default election: Federal Election 2025 (open)")
+            else:
+                print("ℹ️  Elections already exist")
+        except Exception as e:
+            print(f"⚠️  Could not seed election: {e}")
+            db.session.rollback()
+
+        # 8) commit
         try:
             db.session.commit()
         except Exception as e:

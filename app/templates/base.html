@@ -99,7 +99,7 @@
     </nav>
 
     <!-- Flash messages -->
-    <div class="container mt-3">
+    <div class="container mt-3" aria-live="polite">
       {% with messages = get_flashed_messages(with_categories=True) %}
         {% if messages %}
           {% for category, message in messages %}
@@ -135,7 +135,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="sv-footer">
+    <footer class="sv-footer" role="contentinfo">
       <div class="container">
         SecureVote &mdash; Secure Electronic Voting Platform
       </div>

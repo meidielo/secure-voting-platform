@@ -255,3 +255,74 @@ a:hover { color: var(--sv-primary-dark); }
   background: var(--sv-primary);
   border-color: var(--sv-primary);
 }
+
+/* ============================================================
+   Accessibility
+   ============================================================ */
+
+/* --- Focus indicators (WCAG 2.4.7) --- */
+:focus-visible {
+  outline: 3px solid var(--sv-primary);
+  outline-offset: 2px;
+}
+.btn:focus-visible {
+  outline: 3px solid var(--sv-primary);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.form-control:focus-visible,
+.form-select:focus-visible {
+  outline: 3px solid var(--sv-primary);
+  outline-offset: 0;
+}
+.nav-link:focus-visible {
+  outline: 3px solid var(--sv-primary);
+  outline-offset: 2px;
+  border-radius: var(--sv-radius);
+}
+
+/* --- Minimum touch targets (WCAG 2.5.8 — 44x44px) --- */
+.btn { min-height: 38px; }
+.btn-sm { min-height: 32px; }
+.nav-link { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* --- Reduced motion (WCAG 2.3.3) --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- High contrast mode support --- */
+@media (prefers-contrast: more) {
+  :root {
+    --sv-border: #64748b;
+    --sv-muted: #334155;
+  }
+  .sv-card, .sv-stat-card, .sv-table-wrap {
+    border-width: 2px;
+  }
+  .sv-badge { border: 1px solid currentColor; }
+  .btn { border-width: 2px; }
+}
+
+/* --- Large text support (don't break layout with zoom) --- */
+@media (min-resolution: 1dpi) {
+  html { font-size: clamp(14px, 1rem, 18px); }
+}
+
+/* --- Screen reader only (complementing Bootstrap's .visually-hidden) --- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
