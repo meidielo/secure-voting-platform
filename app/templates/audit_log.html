@@ -1,67 +1,61 @@
 {% extends "base.html" %}
 {% block title %}Audit Log - SecureVote{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <h2 class="mb-4"><i class="fas fa-shield-alt me-2"></i>Audit Log</h2>
+<div class="sv-page-header">
+  <h2><i class="fas fa-shield-alt me-2"></i>Audit Log</h2>
+</div>
 
-  <!-- Chain Integrity Status -->
-  <div class="alert {{ 'alert-success' if chain_ok else 'alert-warning' }}" role="status">
-    <h5 class="mb-1">
-      {% if chain_ok %}
-        <i class="fas fa-check-circle me-1"></i> HMAC Chain Verified
-      {% else %}
-        <i class="fas fa-exclamation-triangle me-1"></i> Chain Status
-      {% endif %}
-    </h5>
-    {% if chain_errors %}
-      <ul class="mb-0 small">
-        {% for err in chain_errors %}
-          <li>{{ err }}</li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="mb-0 small">All {{ total_entries }} entries have valid HMAC signatures with unbroken chain.</p>
-    {% endif %}
-  </div>
-
-  <!-- Log Table -->
-  {% if entries %}
-  <div class="table-responsive">
-    <table class="table table-sm table-striped table-hover" aria-label="Audit log entries">
-      <thead class="table-dark">
-        <tr>
-          <th scope="col">Timestamp</th>
-          <th scope="col">Level</th>
-          <th scope="col">Logger</th>
-          <th scope="col">Message</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for entry in entries %}
-        <tr>
-          <td class="text-nowrap"><small>{{ entry.get('timestamp', '') }}</small></td>
-          <td>
-            {% set lvl = entry.get('level', 'INFO') %}
-            {% if lvl == 'ERROR' or lvl == 'CRITICAL' %}
-              <span class="badge bg-danger">{{ lvl }}</span>
-            {% elif lvl == 'WARNING' %}
-              <span class="badge bg-warning text-dark">{{ lvl }}</span>
-            {% else %}
-              <span class="badge bg-secondary">{{ lvl }}</span>
-            {% endif %}
-          </td>
-          <td><small>{{ entry.get('logger', '') }}</small></td>
-          <td><small>{{ entry.get('message', '') }}</small></td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <p class="text-muted text-center"><small>Showing {{ entries|length }} most recent entries (newest first)</small></p>
+<!-- Chain Status -->
+<div class="alert {{ 'alert-success' if chain_ok else 'alert-warning' }} mb-4" role="status">
+  {% if chain_ok %}
+    <i class="fas fa-check-circle me-1"></i> <strong>HMAC Chain Verified</strong>
+    <span class="text-muted" style="font-size:.8rem"> — {{ total_entries }} entries with valid signatures</span>
   {% else %}
-  <div class="alert alert-info text-center">
-    <i class="fas fa-info-circle me-1"></i> No audit log entries found.
-  </div>
+    <i class="fas fa-exclamation-triangle me-1"></i> <strong>Chain Status</strong>
+    <ul class="mb-0 mt-1" style="font-size:.8rem">
+      {% for err in chain_errors %}
+        <li>{{ err }}</li>
+      {% endfor %}
+    </ul>
   {% endif %}
 </div>
+
+{% if entries %}
+<div class="sv-table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Level</th>
+        <th>Logger</th>
+        <th>Message</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for entry in entries %}
+      <tr>
+        <td class="text-nowrap">{{ entry.get('timestamp', '') }}</td>
+        <td>
+          {% set lvl = entry.get('level', 'INFO') %}
+          {% if lvl == 'ERROR' or lvl == 'CRITICAL' %}
+            <span class="sv-badge sv-badge-danger">{{ lvl }}</span>
+          {% elif lvl == 'WARNING' %}
+            <span class="sv-badge sv-badge-warning">{{ lvl }}</span>
+          {% else %}
+            <span class="sv-badge sv-badge-neutral">{{ lvl }}</span>
+          {% endif %}
+        </td>
+        <td>{{ entry.get('logger', '') }}</td>
+        <td style="max-width:500px; word-break:break-word">{{ entry.get('message', '') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-muted text-center mt-2" style="font-size:.8rem">Showing {{ entries|length }} most recent entries (newest first)</p>
+{% else %}
+<div class="alert alert-info text-center">
+  <i class="fas fa-info-circle me-1"></i> No audit log entries found.
+</div>
+{% endif %}
 {% endblock %}

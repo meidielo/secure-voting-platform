@@ -15,7 +15,11 @@
   <div>
     <h2 style="margin-bottom:.25rem">Welcome back, {{ current_user.username }}</h2>
     <p class="text-muted mb-0" style="font-size:.875rem">
-      {% if current_user.has_voted %}
+      {% if current_user.is_manager %}
+        Manage elections, users, and view results from the navigation above.
+      {% elif current_user.is_delegate %}
+        Manage candidates in your region from the Delegate panel.
+      {% elif current_user.has_voted %}
         Your anonymous ballot has been recorded.
       {% elif eligible and election_open %}
         You're eligible to vote. Cast your ballot below.
