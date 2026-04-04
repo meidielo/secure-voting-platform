@@ -24,14 +24,14 @@ def send_verification_email(user):
 
     try:
         msg = Message(
-            subject='notAEC - Verify Your Email',
+            subject='SecureVote - Verify Your Email',
             recipients=[user.email],
             body=(
                 f"Hello {user.username},\n\n"
                 f"Please verify your email by clicking the link below (valid for 24 hours):\n"
                 f"{verify_url}\n\n"
                 f"If you did not create an account, please ignore this email.\n\n"
-                f"— notAEC"
+                f"— SecureVote"
             ),
         )
         mail.send(msg)

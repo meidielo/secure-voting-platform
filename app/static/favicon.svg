@@ -1,22 +1,5 @@
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4c1d95;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#3730a3;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-
-  <!-- Shield shape - centered and properly proportioned -->
-  <path d="M16 3 L27 7 L27 17 C27 22 23 26 16 29 C9 26 5 22 5 17 L5 7 Z"
-        fill="url(#faviconGradient)"
-        stroke="#1e293b"
-        stroke-width="1"/>
-
-  <!-- Check mark - centered -->
-  <path d="M11 15 L15 19 L21 13"
-        stroke="white"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="6" fill="#6366f1"/>
+  <path d="M16 6C12.13 6 9 9.13 9 13v3.5c0 4.97 3.13 8.5 7 9.5 3.87-1 7-4.53 7-9.5V13c0-3.87-3.13-7-7-7z" fill="#fff" fill-opacity=".2"/>
+  <path d="M14.75 17l-1.75-1.75a.875.875 0 00-1.24 1.24l2.37 2.37a.875.875 0 001.24 0l4.62-4.62a.875.875 0 00-1.24-1.24L14.75 17z" fill="#fff"/>
 </svg>

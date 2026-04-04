@@ -30,15 +30,15 @@ def _send_reset_email(user):
 
     try:
         msg = Message(
-            subject='notAEC - Password Reset Request',
+            subject='SecureVote - Password Reset Request',
             recipients=[user.email],
             body=(
                 f"Hello {user.username},\n\n"
-                f"A password reset was requested for your notAEC account.\n\n"
+                f"A password reset was requested for your SecureVote account.\n\n"
                 f"Click the link below to reset your password (valid for 30 minutes):\n"
                 f"{reset_url}\n\n"
                 f"If you did not request this, please ignore this email.\n\n"
-                f"— notAEC Security"
+                f"— SecureVote Security"
             ),
         )
         mail.send(msg)

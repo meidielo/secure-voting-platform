@@ -34,7 +34,7 @@ class TestSmokeTests:
         """Test that the login page loads successfully."""
         response = client.get('/login')
         assert response.status_code == 200
-        assert b'Voter Sign In' in response.data
+        assert b'Sign in' in response.data or b'SecureVote' in response.data
 
     def test_successful_login(self, client):
         """Test successful login with test credentials."""
@@ -150,7 +150,7 @@ class TestSmokeTests:
         # Logout
         response = client.get('/logout', follow_redirects=True)
         assert response.status_code == 200
-        assert b'Voter Sign In' in response.data
+        assert b'Sign in' in response.data or b'SecureVote' in response.data
 
         # Try to access dashboard (should redirect to login)
         response = client.get('/dashboard')

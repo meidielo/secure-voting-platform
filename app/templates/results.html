@@ -1,77 +1,70 @@
 {% extends "base.html" %}
+{% block title %}Election Results - SecureVote{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <div class="alert alert-info" role="alert">
-            <h4><i class="fas fa-shield-alt"></i> Official Election Results</h4>
-            <p>This is a secure, separate results interface accessible only to authorized election officials.</p>
-            <small class="text-muted">
-                Results generated at: {{ timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }} |
-                Accessed by: {{ admin_user }} |
-                Total votes recorded: {{ total_votes }}
-            </small>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3>Election Results</h3>
-            </div>
-            <div class="card-body">
-                {% if votes %}
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Candidate</th>
-                                <th>Votes Received</th>
-                                <th>Percentage</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for candidate, vote_count in votes.items() %}
-                            <tr>
-                                <td><strong>{{ candidate }}</strong></td>
-                                <td>{{ vote_count }}</td>
-                                <td>
-                                    {% if total_votes > 0 %}
-                                        {{ "%.1f"|format((vote_count / total_votes) * 100) }}%
-                                    {% else %}
-                                        0.0%
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot class="table-dark">
-                            <tr>
-                                <th>Total</th>
-                                <th>{{ total_votes }}</th>
-                                <th>100.0%</th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                {% else %}
-                    <div class="alert alert-warning">
-                        <h5>No votes recorded yet</h5>
-                        <p>The election is still open for voting.</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5>Security Information</h5>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled">
-                    <li><i class="fas fa-lock text-success"></i> Results accessed by authorized administrator only</li>
-                    <li><i class="fas fa-clock text-info"></i> All access attempts are logged for audit purposes</li>
-                    <li><i class="fas fa-database text-primary"></i> Vote integrity verified through cryptographic hashing</li>
-                    <li><i class="fas fa-user-shield text-warning"></i> One-vote-per-voter enforcement active</li>
-                </ul>
-            </div>
-        </div>
-    </div>
+<div class="sv-page-header">
+  <h2><i class="fas fa-chart-bar me-2"></i>Election Results</h2>
+  <div class="d-flex align-items-center gap-3">
+    <span class="text-muted" style="font-size:.8rem">
+      {{ timestamp.strftime('%d %b %Y %H:%M UTC') }} &middot; {{ total_votes }} votes
+    </span>
+  </div>
 </div>
+
+{% if votes %}
+<!-- Bar Chart (pure CSS) -->
+<div class="sv-card mb-4">
+  <div class="card-body">
+    {% set max_votes = votes.values()|max if votes.values()|list else 1 %}
+    {% for candidate, count in votes.items() %}
+    <div class="d-flex align-items-center mb-3">
+      <div style="width:140px; flex-shrink:0; font-size:.875rem; font-weight:500">{{ candidate }}</div>
+      <div class="flex-grow-1 mx-3">
+        <div style="background:#f1f5f9; border-radius:6px; overflow:hidden; height:28px">
+          {% set pct = (count / total_votes * 100) if total_votes > 0 else 0 %}
+          <div style="width:{{ (count / max_votes * 100) if max_votes > 0 else 0 }}%; background:var(--sv-primary); height:100%; border-radius:6px; transition:width .5s; min-width:2px"></div>
+        </div>
+      </div>
+      <div style="width:90px; flex-shrink:0; text-align:right; font-size:.875rem">
+        <strong>{{ count }}</strong>
+        <span class="text-muted">({{ "%.1f"|format(pct) }}%)</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Results Table -->
+<div class="sv-table-wrap mb-4">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Candidate</th>
+        <th>Votes</th>
+        <th>Percentage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for candidate, count in votes.items() %}
+      <tr>
+        <td><strong>{{ candidate }}</strong></td>
+        <td>{{ count }}</td>
+        <td>{{ "%.1f"|format((count / total_votes * 100) if total_votes > 0 else 0) }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:600; background:var(--sv-bg)">
+        <td>Total</td>
+        <td>{{ total_votes }}</td>
+        <td>100%</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+  <i class="fas fa-info-circle me-1"></i> No votes recorded yet.
+</div>
+{% endif %}
 {% endblock %}

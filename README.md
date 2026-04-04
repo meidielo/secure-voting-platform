@@ -1,4 +1,4 @@
-# notAEC - Secure Electronic Voting Platform
+# SecureVote — Secure Electronic Voting Platform
 
 A production-grade secure online voting platform built with Flask, featuring enterprise-level security controls including PII encryption at rest, multi-factor authentication, Web Application Firewall integration, and cryptographic result signing via HashiCorp Vault.
 

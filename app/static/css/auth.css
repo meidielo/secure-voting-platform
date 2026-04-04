@@ -1,0 +1,186 @@
+/* ============================================================
+   SecureVote Auth Pages (Login, Register)
+   Standalone pages that don't use base.html
+   ============================================================ */
+
+body.sv-auth {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 50%, #ecfdf5 100%);
+  color: #1e293b;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Auth Container --- */
+.sv-auth-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.sv-auth-card {
+  width: 100%;
+  max-width: 1000px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.06), 0 4px 10px rgba(0,0,0,.04);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 768px) {
+  .sv-auth-card { grid-template-columns: 1fr; }
+  .sv-auth-info { display: none; }
+}
+
+/* --- Info Pane (left) --- */
+.sv-auth-info {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #fff;
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.sv-auth-info h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+.sv-auth-info p { opacity: .85; font-size: .9375rem; line-height: 1.7; }
+
+.sv-trust-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+}
+.sv-trust-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .625rem 0;
+  font-size: .875rem;
+  opacity: .9;
+}
+.sv-trust-list li i {
+  color: #a5b4fc;
+  font-size: 1rem;
+  margin-top: .15rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* --- Form Pane (right) --- */
+.sv-auth-form {
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.sv-auth-form .sv-brand {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #6366f1;
+  margin-bottom: 1.5rem;
+}
+.sv-auth-form .sv-brand img { width: 32px; height: 32px; }
+
+.sv-auth-form h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+}
+.sv-auth-form .sv-subtitle {
+  color: #64748b;
+  font-size: .875rem;
+  margin-bottom: 1.5rem;
+}
+
+.sv-auth-form .form-control {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: .625rem .875rem;
+  font-size: .875rem;
+}
+.sv-auth-form .form-control:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+.sv-auth-form .form-label {
+  font-size: .8125rem;
+  font-weight: 500;
+  color: #475569;
+}
+.sv-auth-form .btn-primary {
+  background: #6366f1;
+  border-color: #6366f1;
+  padding: .625rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+.sv-auth-form .btn-primary:hover {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.sv-auth-form .sv-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.25rem 0;
+  color: #94a3b8;
+  font-size: .8125rem;
+}
+.sv-auth-form .sv-divider::before,
+.sv-auth-form .sv-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* --- Alerts inside auth forms --- */
+.sv-auth-form .alert {
+  border: none;
+  border-radius: 8px;
+  font-size: .8125rem;
+  padding: .75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+/* --- Minimal top bar --- */
+.sv-auth-topbar {
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sv-auth-topbar .sv-brand {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 700;
+  color: #6366f1;
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+
+/* --- Security note --- */
+.sv-security-note {
+  margin-top: 1.5rem;
+  padding: .75rem 1rem;
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: .75rem;
+  color: #64748b;
+  line-height: 1.6;
+}
