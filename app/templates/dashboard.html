@@ -32,7 +32,62 @@
   </div>
 </div>
 
-<!-- Status Row -->
+<!-- Quick Actions for Manager/Delegate -->
+{% if current_user.is_manager %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <a href="{{ url_for('admin_users.manage_users') }}" class="sv-stat-card d-block text-decoration-none" style="color:inherit">
+      <div class="stat-label">Users</div>
+      <div style="font-size:1.25rem; font-weight:600; color:var(--sv-primary)"><i class="fas fa-users me-2"></i>Manage</div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('elections.list_elections') }}" class="sv-stat-card d-block text-decoration-none" style="color:inherit">
+      <div class="stat-label">Elections</div>
+      <div style="font-size:1.25rem; font-weight:600; color:var(--sv-primary)"><i class="fas fa-calendar-check me-2"></i>Manage</div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('main.results') }}" class="sv-stat-card d-block text-decoration-none" style="color:inherit">
+      <div class="stat-label">Results</div>
+      <div style="font-size:1.25rem; font-weight:600; color:var(--sv-primary)"><i class="fas fa-chart-bar me-2"></i>View</div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('audit.view_audit_log') }}" class="sv-stat-card d-block text-decoration-none" style="color:inherit">
+      <div class="stat-label">Audit Log</div>
+      <div style="font-size:1.25rem; font-weight:600; color:var(--sv-primary)"><i class="fas fa-shield-alt me-2"></i>Review</div>
+    </a>
+  </div>
+</div>
+
+{% elif current_user.is_delegate %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <a href="{{ url_for('main.delegate_dashboard') }}" class="sv-stat-card d-block text-decoration-none" style="color:inherit">
+      <div class="stat-label">Candidates</div>
+      <div style="font-size:1.25rem; font-weight:600; color:var(--sv-primary)"><i class="fas fa-user-tie me-2"></i>Manage</div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <div class="sv-stat-card">
+      <div class="stat-label">Your Role</div>
+      <span class="sv-badge sv-badge-info">Delegate</span>
+      {% if enrol and enrol.region %}
+        <span class="text-muted ms-2" style="font-size:.8rem">{{ enrol.region.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="sv-stat-card">
+      <div class="stat-label">Account</div>
+      <span class="sv-badge sv-badge-success">Approved</span>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- Voter Status Row -->
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="sv-stat-card">
@@ -83,6 +138,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- Election Banner -->
 {% if active_election and election_open %}
